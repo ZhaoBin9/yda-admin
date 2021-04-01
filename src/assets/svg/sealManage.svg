@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="26px" height="28px" viewBox="0 0 26 28" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>印章</title>
+    <defs>
+        <path d="M0.311598672,17.536596 L17.7524092,17.536596 L17.7524092,19.4744533 L0.311598672,19.4744533 L0.311598672,17.536596 Z M16.4636503,12.3689607 L12.232123,12.3689607 C11.8505919,11.9185793 11.5795325,11.4080543 11.5351503,10.835616 C11.3534688,8.49423694 13.8767181,7.37314411 13.8767181,4.50158542 C13.8767181,2.06271184 12.0196028,0.0958326433 9.03207472,0.0958326433 C6.04447582,0.0958326433 4.18736056,2.06271184 4.18736056,4.50158542 C4.18736056,7.37314411 6.71060986,8.49428413 6.52895196,10.835616 C6.48449898,11.4080779 6.213534,11.9185793 5.83197925,12.3689607 L1.60038117,12.3689607 C0.888661587,12.3689607 0.311622267,12.9460236 0.311622267,13.6577196 L0.311622267,16.2446989 L17.75248,16.2446989 L17.75248,13.6577196 C17.75248,12.9460236 17.1754643,12.3689607 16.4636503,12.3689607 Z" id="path-1"></path>
+        <filter x="-40.1%" y="-25.8%" width="180.3%" height="172.2%" filterUnits="objectBoundingBox" id="filter-2">
+            <feOffset dx="0" dy="2" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset>
+            <feGaussianBlur stdDeviation="2" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur>
+            <feColorMatrix values="0 0 0 0 0.301960784   0 0 0 0 0.345098039   0 0 0 0 0.396078431  0 0 0 0.2 0" type="matrix" in="shadowBlurOuter1"></feColorMatrix>
+        </filter>
+    </defs>
+    <g id="PC端样稿" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="侧边导航icon" transform="translate(-47.000000, -338.000000)" fill-rule="nonzero">
+            <g id="形状" transform="translate(51.000000, 340.000000)">
+                <use fill="black" fill-opacity="1" filter="url(#filter-2)" xlink:href="#path-1"></use>
+                <use fill="#4D5865" xlink:href="#path-1"></use>
+            </g>
+        </g>
+    </g>
+</svg>

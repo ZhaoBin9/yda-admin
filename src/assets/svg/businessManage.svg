@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="26px" height="26px" viewBox="0 0 26 26" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>企业</title>
+    <defs>
+        <path d="M16,0 C17.1045695,-2.02906125e-16 18,0.8954305 18,2 L18,16 C18,17.1045695 17.1045695,18 16,18 L2,18 C0.8954305,18 1.3527075e-16,17.1045695 0,16 L0,2 C-1.3527075e-16,0.8954305 0.8954305,2.02906125e-16 2,0 L16,0 Z M10.9679194,2.89072328 L7.17953608,2.89072328 C6.54883671,2.89072328 6.50790639,3.39723559 6.73116251,3.67490974 C6.82496854,3.79182517 7.11065568,4.14894205 7.41000941,4.5232581 L7.63430258,4.80373556 C7.74494581,4.9421023 7.85124555,5.07504775 7.94380377,5.19081202 L8.10781357,5.39594791 C8.20122594,5.51278712 8.25907054,5.58514438 8.25907054,5.58514438 C8.25907054,5.58514438 5.94697801,11.9981694 5.94697801,12.3544491 C5.94697801,12.7102503 8.79163952,15.1037492 9.07536055,15.1037492 C9.35908549,15.1037492 12.2009443,12.710266 12.2009443,12.3572421 C12.2009443,12.0009722 9.88838298,5.58514436 9.88838298,5.58514438 C9.88838298,5.58514438 11.1935017,3.95258389 11.4167578,3.67490974 C11.6395471,3.39444457 11.6018733,2.89072328 10.9679194,2.89072328 L10.9679194,2.89072328 Z" id="path-1"></path>
+        <filter x="-38.9%" y="-27.8%" width="177.8%" height="177.8%" filterUnits="objectBoundingBox" id="filter-2">
+            <feOffset dx="0" dy="2" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset>
+            <feGaussianBlur stdDeviation="2" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur>
+            <feColorMatrix values="0 0 0 0 0.301960784   0 0 0 0 0.345098039   0 0 0 0 0.396078431  0 0 0 0.2 0" type="matrix" in="shadowBlurOuter1"></feColorMatrix>
+        </filter>
+    </defs>
+    <g id="PC端样稿" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="侧边导航icon" transform="translate(-47.000000, -409.000000)" fill-rule="nonzero">
+            <g id="形状结合" transform="translate(51.000000, 411.000000)">
+                <use fill="black" fill-opacity="1" filter="url(#filter-2)" xlink:href="#path-1"></use>
+                <use fill="#4D5865" xlink:href="#path-1"></use>
+            </g>
+        </g>
+    </g>
+</svg>

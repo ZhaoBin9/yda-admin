@@ -1,0 +1,275 @@
+{
+  "id": "2446402",
+  "name": "印得安",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "20621327",
+      "name": "删 除",
+      "font_class": "shanchu",
+      "unicode": "e649",
+      "unicode_decimal": 58953
+    },
+    {
+      "icon_id": "20620883",
+      "name": "下拉",
+      "font_class": "xiala1",
+      "unicode": "e648",
+      "unicode_decimal": 58952
+    },
+    {
+      "icon_id": "20620879",
+      "name": "Waring",
+      "font_class": "Waring",
+      "unicode": "e647",
+      "unicode_decimal": 58951
+    },
+    {
+      "icon_id": "20620835",
+      "name": "叉",
+      "font_class": "cha",
+      "unicode": "e624",
+      "unicode_decimal": 58916
+    },
+    {
+      "icon_id": "20620836",
+      "name": "路径备份 4",
+      "font_class": "lujingbeifen4",
+      "unicode": "e625",
+      "unicode_decimal": 58917
+    },
+    {
+      "icon_id": "20620837",
+      "name": "编辑",
+      "font_class": "bianji",
+      "unicode": "e626",
+      "unicode_decimal": 58918
+    },
+    {
+      "icon_id": "20620838",
+      "name": "编组 22",
+      "font_class": "bianzu22",
+      "unicode": "e627",
+      "unicode_decimal": 58919
+    },
+    {
+      "icon_id": "20620839",
+      "name": "路径",
+      "font_class": "lujing",
+      "unicode": "e628",
+      "unicode_decimal": 58920
+    },
+    {
+      "icon_id": "20620840",
+      "name": "归档",
+      "font_class": "guidang",
+      "unicode": "e629",
+      "unicode_decimal": 58921
+    },
+    {
+      "icon_id": "20620841",
+      "name": "多选选中",
+      "font_class": "duoxuanxuanzhong",
+      "unicode": "e62a",
+      "unicode_decimal": 58922
+    },
+    {
+      "icon_id": "20620842",
+      "name": "盖印",
+      "font_class": "gaiyin",
+      "unicode": "e62b",
+      "unicode_decimal": 58923
+    },
+    {
+      "icon_id": "20620843",
+      "name": "首页未选",
+      "font_class": "shouyeweixuan",
+      "unicode": "e62c",
+      "unicode_decimal": 58924
+    },
+    {
+      "icon_id": "20620844",
+      "name": "企业未选",
+      "font_class": "qiyeweixuan",
+      "unicode": "e62d",
+      "unicode_decimal": 58925
+    },
+    {
+      "icon_id": "20620845",
+      "name": "多选未选",
+      "font_class": "duoxuanweixuan",
+      "unicode": "e62e",
+      "unicode_decimal": 58926
+    },
+    {
+      "icon_id": "20620846",
+      "name": "审批未选",
+      "font_class": "shenpiweixuan",
+      "unicode": "e62f",
+      "unicode_decimal": 58927
+    },
+    {
+      "icon_id": "20620847",
+      "name": "未选",
+      "font_class": "weixuan",
+      "unicode": "e630",
+      "unicode_decimal": 58928
+    },
+    {
+      "icon_id": "20620848",
+      "name": "添加",
+      "font_class": "tianjia",
+      "unicode": "e631",
+      "unicode_decimal": 58929
+    },
+    {
+      "icon_id": "20620849",
+      "name": "下拉",
+      "font_class": "xiala",
+      "unicode": "e632",
+      "unicode_decimal": 58930
+    },
+    {
+      "icon_id": "20620850",
+      "name": "企业选中",
+      "font_class": "qiyexuanzhong",
+      "unicode": "e633",
+      "unicode_decimal": 58931
+    },
+    {
+      "icon_id": "20620851",
+      "name": "已选",
+      "font_class": "yixuan",
+      "unicode": "e634",
+      "unicode_decimal": 58932
+    },
+    {
+      "icon_id": "20620852",
+      "name": "退出",
+      "font_class": "tuichu",
+      "unicode": "e635",
+      "unicode_decimal": 58933
+    },
+    {
+      "icon_id": "20620853",
+      "name": "申请",
+      "font_class": "shenqing",
+      "unicode": "e636",
+      "unicode_decimal": 58934
+    },
+    {
+      "icon_id": "20620854",
+      "name": "印章选中",
+      "font_class": "yinzhangxuanzhong",
+      "unicode": "e637",
+      "unicode_decimal": 58935
+    },
+    {
+      "icon_id": "20620855",
+      "name": "用印",
+      "font_class": "yongyin",
+      "unicode": "e638",
+      "unicode_decimal": 58936
+    },
+    {
+      "icon_id": "20620856",
+      "name": "印章未选",
+      "font_class": "yinzhangweixuan",
+      "unicode": "e639",
+      "unicode_decimal": 58937
+    },
+    {
+      "icon_id": "20620857",
+      "name": "用印选中",
+      "font_class": "yongyinxuanzhong",
+      "unicode": "e63a",
+      "unicode_decimal": 58938
+    },
+    {
+      "icon_id": "20620858",
+      "name": "审批选中",
+      "font_class": "shenpixuanzhong",
+      "unicode": "e63b",
+      "unicode_decimal": 58939
+    },
+    {
+      "icon_id": "20620859",
+      "name": "审批",
+      "font_class": "shenpi",
+      "unicode": "e63c",
+      "unicode_decimal": 58940
+    },
+    {
+      "icon_id": "20620860",
+      "name": "长箭头",
+      "font_class": "changjiantou",
+      "unicode": "e63d",
+      "unicode_decimal": 58941
+    },
+    {
+      "icon_id": "20620861",
+      "name": "指纹未选",
+      "font_class": "zhiwenweixuan",
+      "unicode": "e63e",
+      "unicode_decimal": 58942
+    },
+    {
+      "icon_id": "20620862",
+      "name": "首页选中",
+      "font_class": "shouyexuanzhong",
+      "unicode": "e63f",
+      "unicode_decimal": 58943
+    },
+    {
+      "icon_id": "20620863",
+      "name": "用印未选",
+      "font_class": "yongyinweixuan",
+      "unicode": "e640",
+      "unicode_decimal": 58944
+    },
+    {
+      "icon_id": "20620864",
+      "name": "指纹",
+      "font_class": "zhiwen",
+      "unicode": "e641",
+      "unicode_decimal": 58945
+    },
+    {
+      "icon_id": "20620865",
+      "name": "搜索",
+      "font_class": "sousuo",
+      "unicode": "e642",
+      "unicode_decimal": 58946
+    },
+    {
+      "icon_id": "20620866",
+      "name": "指纹选中",
+      "font_class": "zhiwenxuanzhong",
+      "unicode": "e643",
+      "unicode_decimal": 58947
+    },
+    {
+      "icon_id": "20620867",
+      "name": "编组 25",
+      "font_class": "bianzu25",
+      "unicode": "e644",
+      "unicode_decimal": 58948
+    },
+    {
+      "icon_id": "20620868",
+      "name": "路径备份 5",
+      "font_class": "lujingbeifen5",
+      "unicode": "e645",
+      "unicode_decimal": 58949
+    },
+    {
+      "icon_id": "20620869",
+      "name": "logo",
+      "font_class": "logo",
+      "unicode": "e646",
+      "unicode_decimal": 58950
+    }
+  ]
+}
