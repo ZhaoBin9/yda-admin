@@ -3,9 +3,9 @@
     <a-modal
       centered
       :width="786"
-      title="添加流程"
+      :title="modalTitle"
       :visible="visible"
-      @cancel="$emit('update:visible', false), (isSelectopen = false)"
+      @cancel="handleCancel"
       :footer="null"
       :getContainer="() => $refs.parent"
       :maskClosable="false"
@@ -18,15 +18,15 @@
             :labelCol="{ span: 4, offset: 2 }"
             :wrapperCol="{ span: 14 }"
           >
-            <a-input :maxlength="10" v-model:value="modalVal.processName" placeholder="请输入流程名称" />
+            <a-input :maxlength="30" v-model:value="modalVal.processName" placeholder="请输入流程名称" />
           </a-form-item>
           <a-form-item label="业务类型" name="business" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
             <a-radio-group v-model:value="modalVal.business">
               <a-radio :value="1">
-                归档审批
+                用印审批
               </a-radio>
               <a-radio :value="2">
-                用印审批
+                归档审批
               </a-radio>
             </a-radio-group>
           </a-form-item>
@@ -38,15 +38,17 @@
               @focus="selectScopeFocus"
               @blur="selectScopeBlur"
               @click="selectScopeClick"
+              :getPopupContainer="e => e.parentNode"
             >
               <template #dropdownRender>
                 <scope-tab
-                  :searchLbwList="searchLbwList"
+                  :searchLbwList="check.totalSearchList"
+                  :organizationalList="organizationalList"
                   v-model:departmentVal="modalVal.departmentVal"
                   v-model:department="modalVal.department"
                   @click="clickSelectTab"
                   :visible="scopeVisible"
-                  :type="type"
+                  :types="types"
                 />
               </template>
             </a-select>
@@ -64,25 +66,28 @@
           <a-form-item
             v-if="modalVal.process === 1"
             label="审批流程"
-            name="approvalStaff"
+            name="staffList"
             :labelCol="{ span: 4, offset: 2 }"
             :wrapperCol="{ span: 14 }"
           >
             <div style="height: 20px"></div>
             <a-timeline>
-              <a-timeline-item color="red" v-for="(item, index) in modalVal.approvalStaff" :key="item.id">
-                <template #dot>
-                  <div class="time-progess">{{ index + 1 }}</div>
+              <virtual-list
+                :list="modalVal.staffList"
+                noHeight
+                :size="103"
+                :remain="8"
+                :isScrollTop="isVirtualListScroll2"
+              >
+                <template #default="{item}">
+                  <approval-list-item :item="item" :isRemove="true" :deleteApprovalFn="deleteApprovalFn" />
                 </template>
-                <section class="time-sec">
-                  <p class="time-name">{{ item.name || item.userName }}</p>
-                </section>
-              </a-timeline-item>
+              </virtual-list>
               <a-timeline-item color="red" key="ss">
                 <template #dot>
-                  <div class="time-progess">{{ modalVal.approvalStaff.length + 1 }}</div>
+                  <div class="time-progess">{{ modalVal.staffList.length + 1 }}</div>
                 </template>
-                <a-button class="add-btn" @click="approvalVisible = true">
+                <a-button class="add-btn" @click="openApprovalModal">
                   +
                 </a-button>
               </a-timeline-item>
@@ -102,7 +107,7 @@
       </a-form>
 
       <div class="action-box">
-        <a-button class="btn close" @click="$emit('update:visible', false)">取消</a-button>
+        <a-button class="btn close" @click="handleCancel">取消</a-button>
         <a-button class="btn comfirm" @click="comfirmAdd" :loading="loading">确定</a-button>
       </div>
     </a-modal>
@@ -114,38 +119,61 @@
       :visible="approvalVisible"
       :getContainer="() => $refs.parent"
     >
-      <div
-        style="margin-top: 30px; padding-left: 20px; padding-bottom: 20px; max-height: 400px; overflow-y: scroll;"
-        v-show="searchLbwList.length"
-      >
+      <section style="margin-bottom: 10px" v-if="check.totalSearchList.length - modalVal.staffList.length">
+        <a-input class="search-input" style="width: 250px" v-model:value="check.searchLbwVal">
+          <template #prefix> <img src="@/assets/svg/search.svg" /> </template>
+        </a-input>
+        <a-button type="primary" class="btn search-btn" @click="searchApprovalList">查找</a-button>
+      </section>
+      <div style=" padding-left: 20px; padding-bottom: 20px; overflow-y: scroll;" v-show="check.searchLbwList.length">
         <a-checkbox :indeterminate="check.indeterminate" :checked="check.checkAll" @change="onCheckAllChange">
           全选
         </a-checkbox>
-        <a-checkbox-group v-model:value="check.checkedList" :options="searchLbwList" @change="onChange" />
+        <a-checkbox-group :value="check.checkedList">
+          <virtual-list :list="check.searchLbwList" :size="52" :remain="10" :isScrollTop="isVirtualListScroll">
+            <template #default="{item}">
+              <approval-staff-item :item="item" :onChange="onChange" />
+            </template>
+          </virtual-list>
+        </a-checkbox-group>
+      </div>
+      <div style="line-height: 200px; text-align: center;" v-show="!check.searchLbwList.length">
+        暂无审批人
       </div>
     </a-modal>
   </div>
 </template>
 
 <script>
-import { defineComponent, onBeforeUnmount, onMounted, reactive, ref, toRaw, toRefs, watch } from 'vue'
+import { computed, defineComponent, onBeforeUnmount, onMounted, reactive, ref, toRaw, toRefs, watch } from 'vue'
 import ScopeTab from './scopeTab'
-import { getProcessStaffList } from '@/apis/businessManage'
+import { getProcessStaffList, validateProcessName, getDepartmentOrganizational } from '@/apis/businessManage'
+import VirtualList from '@/components/VirtualList'
+import ApprovalStaffItem from '@/components/VirtualList/approvalStaffItem'
+import ApprovalListItem from '@/components/VirtualList/approvalListItem'
+import { useCheckStateAndEvent } from '@/utils/hooks'
 
 export default defineComponent({
   components: {
-    ScopeTab
+    ScopeTab,
+    VirtualList,
+    ApprovalStaffItem,
+    ApprovalListItem
   },
   props: {
     visible: {
       type: Boolean,
       default: false
     },
+    type: {
+      type: String,
+      default: 'add'
+    },
     loading: {
       type: Boolean,
       default: false
     },
-    type: {
+    types: {
       type: String,
       default: 'add'
     },
@@ -156,17 +184,20 @@ export default defineComponent({
   },
   setup(props, ctx) {
     const { emit } = ctx
+    const modalTitle = computed(() => (props.types === 'add' ? '添加流程' : '修改流程'))
     const formRef = ref()
+
     const modalVal = reactive({
       processName: undefined,
-      business: 1,
-      process: 1,
-      department: undefined,
+      business: 1, // 业务类型
+      process: 1, // 流程类型
+      department: undefined, // 适用范围
       departmentVal: {
+        // 适用范围的选择值
         staff: [],
         department: []
       },
-      approvalStaff: []
+      staffList: []
     })
     const approvalFormRef = ref()
     const approvalModel = reactive({
@@ -186,11 +217,15 @@ export default defineComponent({
       autoExpandParent: false,
       selectedKeys: [],
       approvalVisible: false,
-      isSelectopen: false,
-      isFocus: true,
-      isClickTab: true,
-      searchLbwList: [],
-      scopeVisible: props.visible
+      isSelectopen: false, // 是否打开流程范围的下拉框
+      isFocus: true, // 是否流程范围获取焦点
+      isClickTab: true, // 是否点的时流程范围的下拉框上
+      scopeVisible: props.visible, // 流程范围下拉框的数据刷新的作用
+      organizationalList: [],
+      isAllFlowScope: false,
+      searchLbwVal: undefined,
+      isVirtualListScroll: 0,
+      isVirtualListScroll2: 0
     })
     const rules = ref()
     rules.value = {
@@ -214,7 +249,7 @@ export default defineComponent({
           message: '请选择流程类型'
         }
       ],
-      approvalStaff: [
+      staffList: [
         {
           type: 'array',
           required: true,
@@ -222,39 +257,86 @@ export default defineComponent({
         }
       ]
     }
+    const validateProcessNameFn = async () => {
+      // 校验流程名字是否重复
+      if (props.types === 'edit') {
+        return { success: true }
+      }
+      const res = await validateProcessName({ flowName: modalVal.processName })
+      return res
+    }
+
+    const enhancerMapFn = {
+      selectApprovalFn() {
+        state.approvalVisible = false
+        setTimeout(() => {
+          formRef.value.clearValidate('staffList')
+          state.isVirtualListScroll2 += '1'
+        })
+      },
+      deleteApprovalFn() {
+        state.isVirtualListScroll2 = {}
+      },
+      searchApprovalList() {
+        typeof state.isVirtualListScroll === 'number' ? state.isVirtualListScroll++ : (state.isVirtualListScroll = 0)
+      },
+      openApprovalModal() {
+        state.approvalVisible = true
+        setTimeout(() => {
+          typeof state.isVirtualListScroll === 'number' ? state.isVirtualListScroll++ : (state.isVirtualListScroll = 0)
+        })
+      },
+      changeStaffList() {
+        modalVal.staffList = check.staffList.map(item => item)
+      }
+    }
+    const {
+      check,
+      onChange,
+      onCheckAllChange,
+      reloadSearchLbwList,
+      selectApprovalFn,
+      searchApprovalList,
+      deleteApprovalFn,
+      openApprovalModal
+    } = useCheckStateAndEvent(enhancerMapFn)
+
     const comfirmAdd = () => {
+      // 提交函数
       emit('update:loading', true)
       formRef.value
         .validate()
-        .then(() => {
+        .then(async () => {
           const params = toRaw(modalVal)
+          const res = await validateProcessNameFn()
+          if (!res.success) {
+            emit('update:loading', false)
+            // emit('update:visible', false)
+            return
+          }
           params.flowName = params.processName
           params.flowType = params.process
           params.businessType = params.business
           if (params.process === 1) {
-            params.flowUserRelsDTO = params.approvalStaff.map(item => ({ userId: item.id || item.userId }))
+            params.flowUserRelsDTO = params.staffList.map(item => ({ userId: item.id || item.userId }))
           }
-          if (!params.departmentVal.staff.length && !params.departmentVal.department.length) {
-            params.flowScope = 1
+          if (props.types === 'edit') {
+            // 修改流程 判断流程范围
+            if (
+              state.isAllFlowScope &&
+              params.departmentVal.department.includes('sss') &&
+              !params.departmentVal.staff.length
+            ) {
+              params.flowScope = 1
+            } else {
+              iterationProcessRange(params)
+            }
           } else {
-            params.flowScope = 2
-            params.flowScopeDTO = []
-            params.departmentVal.department.length &&
-              (params.departmentVal.department = params.departmentVal.department.filter(
-                item => typeof item === 'number'
-              ))
-            params.departmentVal.staff.length > params.departmentVal.department.length
-              ? params.departmentVal.staff.forEach(
-                  (item, index) =>
-                    (params.flowScopeDTO[index] = {
-                      userId: item,
-                      departmentId: params.departmentVal.department[index]
-                    })
-                )
-              : params.departmentVal.department.forEach(
-                  (item, index) =>
-                    (params.flowScopeDTO[index] = { department: item, userId: params.departmentVal.staff[index] })
-                )
+            if (!params.departmentVal.staff.length && !params.departmentVal.department.length) {
+              params.flowScope = 1
+            } else {
+              iterationProcessRange(params)
+            }
           }
 
           delete params.processName
@@ -262,25 +344,69 @@ export default defineComponent({
           delete params.business
           delete params.department
           delete params.departmentVal
-          delete params.approvalStaff
+          delete params.staffList
 
           emit('modalSubmit', params)
         })
         .catch(() => emit('update:loading', false))
+
+      function iterationProcessRange(params) {
+        // 处理 选择流程范围把值提取出来的函数
+        params.flowScope = 2
+        params.flowScopeDTO = []
+        params.departmentVal.department.length &&
+          (params.departmentVal.department = params.departmentVal.department.filter(item => typeof item === 'number'))
+        params.departmentVal.staff.length > params.departmentVal.department.length
+          ? params.departmentVal.staff.forEach(
+              (item, index) =>
+                (params.flowScopeDTO[index] = {
+                  userId: item,
+                  departmentId: params.departmentVal.department[index]
+                })
+            )
+          : params.departmentVal.department.forEach(
+              (item, index) =>
+                (params.flowScopeDTO[index] = { departmentId: item, userId: params.departmentVal.staff[index] })
+            )
+        !params.flowScopeDTO.length ? (params.flowScope = 1) : null
+      }
     }
     const getProcessStaff = async () => {
+      // 获取流程的审批人
       const res = await getProcessStaffList()
-      state.searchLbwList = res.data.map(item => ({ ...item, label: item.name, value: item.id }))
+      check.searchLbwList = res.data.map(item => ({ ...item, label: item.name, value: item.id }))
+      check.totalSearchList = res.data.map(item => ({ ...item, label: item.name, value: item.id }))
+    }
+    const getOrganizationalList = async () => {
+      // 获取流程范围中部门列表的函数
+      function replacePermissionFeild(arr) {
+        return arr.map(item => {
+          const newItem = { ...item, title: item.departmentName, key: item.id }
+          if (newItem.departmentDTOList && newItem.departmentDTOList.length) {
+            newItem.children = replacePermissionFeild(newItem.departmentDTOList)
+          }
+          delete newItem.departmentDTOList
+          delete newItem.departmentName
+          delete newItem.id
+          return newItem
+        })
+      }
+      const res = await getDepartmentOrganizational()
+      const permissionList = replacePermissionFeild(res.data)
+      state.organizationalList = permissionList.length ? permissionList : []
     }
     const onExpand = expandedKeys => {
+      // 部门列表的父级展开
       state.expandedKeys = expandedKeys
       state.autoExpandParent = false
     }
     const onCheck = checkedKeys => {
+      // 部门列表的选择回调
       modalVal.power = checkedKeys
     }
     const selectScopeFocus = () => {
-      state.isSelectopen = !state.isSelectopen
+      // 处理流程范围获取焦点函数
+      state.isSelectopen = true
       state.isClickTab = true
       setTimeout(() => {
         state.isFocus = false
@@ -288,11 +414,13 @@ export default defineComponent({
       }, 100)
     }
     const selectScopeBlur = () => {
+      // 处理流程范围失去焦点函数
       setTimeout(() => {
         state.isFocus = true
-      }, 40)
+      }, 20)
     }
     const selectScopeClick = () => {
+      // 处理流程范围下拉框的点击
       !state.isFocus && (state.isSelectopen = !state.isSelectopen)
       state.isClickTab = true
       setTimeout(() => {
@@ -300,39 +428,47 @@ export default defineComponent({
       }, 80)
     }
     const clickSelectTab = () => {
+      // 处理流程范围下拉框的点击
       state.isClickTab = true
+      state.isFocus = true
       setTimeout(() => {
         state.isClickTab = false
       }, 100)
     }
     const clickNoTab = () => {
+      // 处理点击非流程范围下拉框区域
       if (!state.isClickTab) {
         state.isSelectopen = false
         state.isClickTab = true
       }
     }
 
-    const check = reactive({
-      indeterminate: false,
-      checkedList: [],
-      checkAll: false
-    })
-    const onCheckAllChange = e => {
-      check.indeterminate = e.target.checked
-      check.checkedList = e.target.checked ? toRaw(state.searchLbwList).map(item => item.value) : []
-      check.checkAll = e.target.checked
+    const handleCancel = () => {
+      // 取消流程弹窗
+      formRef.value.resetFields()
+      emit('update:visible', false)
     }
-    const onChange = checkedList => {
-      check.checkAll = checkedList.length === state.searchLbwList.length
-    }
-    const selectApprovalFn = () => {
-      state.approvalVisible = false
-      modalVal.approvalStaff = toRaw(check.checkedList).map(item => state.searchLbwList.find(it => it.id === item))
+    const filterSelectProcessRange = (processType, processRangeVal) => {
+      // 处理下修改时流程，赋值流程范围
+      modalVal.departmentVal = {
+        staff: [],
+        department: []
+      }
+      if (processType === 2) {
+        processRangeVal.forEach(item => {
+          item.userId && modalVal.departmentVal.staff.push(item.userId)
+          item.departmentId && modalVal.departmentVal.department.push(item.departmentId)
+        })
+      } else {
+        modalVal.departmentVal.department.push('sss')
+        state.isAllFlowScope = true
+      }
     }
 
     onMounted(() => {
       document.body.addEventListener('click', clickNoTab, false)
       getProcessStaff()
+      getOrganizationalList()
     })
 
     onBeforeUnmount(() => {
@@ -346,8 +482,8 @@ export default defineComponent({
           state.scopeVisible = newVisible
           return
         }
-
-        if (props.type === 'add') {
+        state.isAllFlowScope = false
+        if (props.types === 'add') {
           modalVal.processName = undefined
           modalVal.business = 1
           modalVal.process = 1
@@ -356,33 +492,30 @@ export default defineComponent({
             staff: [],
             department: []
           }
-          modalVal.approvalStaff = []
-          check.checkedList = []
-          check.checkAll = false
-          check.indeterminate = false
+          modalVal.staffList = []
           state.expandedKeys = []
           state.autoExpandParent = false
-        } else if (props.type === 'edit') {
+          state.searchLbwList = state.totalSearchList
+        } else if (props.types === 'edit') {
           modalVal.processName = props.current.flowName
           modalVal.business = props.current.businessType
           modalVal.process = props.current.flowType
-          modalVal.department = undefined
-          modalVal.departmentVal = {
-            staff: [],
-            department: []
-          }
-          props.current.flowScopeVO.forEach(item => {
-            item.userId && modalVal.departmentVal.staff.push(item.userId)
-            item.departmentId && modalVal.departmentVal.department.push(item.departmentId)
-          })
-          modalVal.approvalStaff = props.current.flowUserRelsVO
-          check.checkedList = props.current.flowUserRelsVO.map(item => item.userId)
-          check.checkAll = check.checkedList.length === state.searchLbwList.length
-          check.indeterminate = check.checkAll
+          modalVal.department = '已选择'
+          filterSelectProcessRange(props.current.flowScope, props.current.flowScopeVO)
+          modalVal.staffList =
+            props.current.flowUserRelsVO && props.current.flowUserRelsVO.length
+              ? props.current.flowUserRelsVO.map(item => (item.id = item.userId) && item)
+              : []
           state.expandedKeys = []
           state.autoExpandParent = false
+          reloadSearchLbwList()
         }
+        check.checkedList = []
+        check.checkAll = false
+        check.indeterminate = false
         state.scopeVisible = newVisible
+        state.searchLbwVal = undefined
+        typeof state.isVirtualListScroll2 === 'number' ? state.isVirtualListScroll2++ : (state.isVirtualListScroll2 = 0)
       }
     )
 
@@ -391,6 +524,7 @@ export default defineComponent({
       formRef,
       modalVal,
       rules,
+      modalTitle,
       onExpand,
       ...toRefs(state),
       onCheck,
@@ -404,7 +538,11 @@ export default defineComponent({
       selectApprovalFn,
       onCheckAllChange,
       onChange,
-      check
+      check,
+      deleteApprovalFn,
+      handleCancel,
+      searchApprovalList,
+      openApprovalModal
     }
   }
 })
@@ -445,6 +583,23 @@ export default defineComponent({
       border-color: transparent;
     }
   }
+}
+.approval-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+  transform: translateY(10px);
+  margin-right: 4px;
+}
+.approval-name {
+  font-size: 16px;
+  font-family: PingFangSC, PingFangSC-Regular;
+  font-weight: 400;
+  text-align: left;
+  color: #999999;
+  display: inline-block;
+  line-height: 32px;
 }
 .tips {
   height: 17px;
@@ -521,7 +676,7 @@ export default defineComponent({
   border-left: 2px solid #c3161c;
 }
 .time-progess {
-  width: 20px;
+  min-width: 20px;
   height: 20px;
   background: #c3161c;
   border-radius: 50%;
@@ -535,17 +690,34 @@ export default defineComponent({
 .time-sec {
   padding-left: 24px;
   margin-top: 5px;
-  margin-bottom: 25px;
+  margin-bottom: 10px;
   transform: translateY(-1px);
   display: flex;
+  position: relative;
+  .remove-arrow {
+    width: 20px;
+    height: 20px;
+    margin-top: 7px;
+    cursor: pointer;
+  }
+  .time-avatar {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin: 0 auto;
+  }
   .time-name {
     font-size: 14px;
     font-family: PingFangSC, PingFangSC-Regular;
     font-weight: 400;
-    text-align: center;
+    // text-align: center;
     color: #999999;
-    line-height: 32px;
-    margin: 0 30px 0 0;
+    // line-height: 32px;
+    width: 100px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 ::v-deep .ant-modal-title {
@@ -571,6 +743,19 @@ export default defineComponent({
   margin-left: 22px;
   transform: translateY(-4px);
 }
+.btn {
+  width: 100px;
+  height: 38px;
+  opacity: 1;
+  border-radius: 5px;
+  margin-left: 20px;
+  margin-top: 40px;
+  margin-bottom: 20px;
+  line-height: 38px;
+}
+.search-btn {
+  margin-top: 0;
+}
 .free-tips {
   margin-top: 20px;
   padding-left: 185px;
@@ -586,7 +771,7 @@ export default defineComponent({
       width: 16px;
       height: 16px;
       margin-right: 6px;
-      transform: translateY(2px);
+      transform: translateY(15px);
     }
   }
   .text {

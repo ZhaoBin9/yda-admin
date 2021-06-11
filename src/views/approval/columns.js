@@ -1,15 +1,17 @@
 export const notApprovalColumns = [
   {
     title: '序号',
-    dataIndex: 'documentId',
-    key: 'documentId',
-    align: 'center'
+    dataIndex: 'id',
+    key: 'id',
+    align: 'center',
+    slots: { customRender: 'id' }
   },
   {
     title: '文件名称',
     dataIndex: 'fileName',
     key: 'fileName',
-    align: 'center'
+    align: 'center',
+    slots: { customRender: 'fileName' }
   },
   {
     title: '印章名称',
@@ -28,7 +30,7 @@ export const notApprovalColumns = [
     dataIndex: 'examineType',
     key: 'examineType',
     align: 'center',
-    slots: { customRender: 'sealNames' }
+    slots: { customRender: 'examineType' }
   },
   {
     title: '提交申请时间',
@@ -48,22 +50,24 @@ export const notApprovalColumns = [
 export const apprpvedColumns = [
   {
     title: '序号',
-    dataIndex: 'documentId',
-    key: 'documentId',
-    align: 'center'
+    dataIndex: 'id',
+    key: 'id',
+    align: 'center',
+    slots: { customRender: 'id' }
   },
   {
     title: '文件名称',
     dataIndex: 'fileName',
     key: 'fileName',
-    align: 'center'
+    align: 'center',
+    slots: { customRender: 'fileName' }
   },
   {
     title: '印章名称',
     dataIndex: 'sealNames',
     key: 'sealNames',
     align: 'center',
-    slots: { customRender: 'examineType' }
+    slots: { customRender: 'sealNames' }
   },
   {
     title: '申请人',

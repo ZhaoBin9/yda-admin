@@ -31,10 +31,18 @@ export function switchEnterprise(params) {
   })
 }
 
+// 获取所有权限列表
+export function getAllPermissionList() {
+  return request({
+    url: '/role/permission/all',
+    method: 'GET'
+  })
+}
+
 // 获取权限列表
 export function getPermissionList() {
   return request({
-    url: '/role/permission/all',
+    url: '/user/permissions/menu',
     method: 'GET'
   })
 }

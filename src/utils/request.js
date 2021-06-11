@@ -2,6 +2,7 @@ import { notification } from 'ant-design-vue'
 // import store from '@/store'
 import axios from 'axios'
 import VueAxios from 'vue-axios'
+import router from '@/router/config-router'
 
 // 创建 axios 实例
 const request = axios.create({
@@ -21,7 +22,7 @@ const errorHandler = error => {
 function objToFormData(obj) {
   const form = new FormData()
   Object.keys(obj).forEach(item => {
-    form.set(item, obj[item])
+    obj[item] !== undefined && obj[item] !== null && form.set(item, obj[item])
   })
   return form
 }
@@ -40,19 +41,28 @@ request.interceptors.request.use(config => {
 // response interceptor
 request.interceptors.response.use(response => {
   const { code, message } = response.data
+  // 当code返回失败时 抛出错误提示
+
   if (+code === 601 || +code === 613) {
     // 登录超市 携带参数退出 跳转到登录页
-    const { pathname, search } = location
+    if (localStorage.getItem('yda-admin-userInfo')) {
+      ;+code !== 0 &&
+        notification['error']({
+          message: '警告',
+          description: message || '服务器未知错误'
+        })
+    }
     localStorage.removeItem('yda-admin-userInfo')
-    window.location = `/login?redirect=${pathname}${search}`
+    router.push(`/login`)
+  } else {
+    ;+code !== 0 &&
+      notification['error']({
+        message: '警告',
+        description: message || '服务器未知错误'
+      })
   }
-  // 当code返回失败时 抛出错误提示
-  ;+code !== 0 &&
-    notification['error']({
-      message: '警告',
-      description: message || '服务器未知错误'
-    })
-  return response.data
+
+  return response.data || []
 }, errorHandler)
 
 const installer = {

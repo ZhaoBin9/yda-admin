@@ -7,7 +7,6 @@
       :visible="visible"
       @cancel="$emit('update:visible', false)"
       :footer="null"
-      :getContainer="() => $refs.parent"
       :closable="false"
       :maskClosable="false"
     >
@@ -72,7 +71,14 @@ export default defineComponent({
           const enterprise = props.allEnterprise.find(item => item.id === modalVal.enterprise)
           const res = await switchEnterprise({ enterpriseId: enterprise.id })
           if (res.success) {
-            emit('select-enterprise', { id: enterprise.id, name: enterprise.company })
+            emit('select-enterprise', {
+              enterpriseId: res.data.result.enterpriseId,
+              enterpriseName: res.data.result.enterpriseName,
+              avatar: res.data.avatar,
+              enterpriseBindLibawall: res.data.result.enterpriseBindLibawall,
+              userName: res.data.userName,
+              userId: res.data.userId
+            })
           }
           loading.value = false
         })

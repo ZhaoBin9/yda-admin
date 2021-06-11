@@ -5,23 +5,22 @@
       :width="786"
       :title="modalTitle"
       :visible="visible"
-      @cancel="$emit('update:visible', false)"
+      @cancel="handleCancel"
       :footer="null"
       :getContainer="() => $refs.parent"
     >
       <a-form ref="formRef" :rules="rules" :model="modalVal">
         <div>
-          <a-form-item
-            label="角色名称"
-            :maxlength="10"
-            name="roleName"
-            :labelCol="{ span: 4, offset: 2 }"
-            :wrapperCol="{ span: 14 }"
-          >
-            <a-input v-model:value="modalVal.roleName" />
+          <a-form-item label="角色名称" name="roleName" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
+            <a-input :maxlength="20" placeholder="请输入角色名称" v-model:value="modalVal.roleName" />
           </a-form-item>
           <a-form-item label="角色说明" name="mark" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-            <a-textarea v-model:value="modalVal.mark" :autoSize="{ minRows: 5 }"></a-textarea>
+            <a-textarea
+              v-model:value="modalVal.mark"
+              placeholder="请输入角色说明"
+              :maxlength="30"
+              :autoSize="{ minRows: 5 }"
+            ></a-textarea>
           </a-form-item>
           <a-form-item label="菜单权限" name="power" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
             <a-tree
@@ -49,7 +48,7 @@
       </a-form>
 
       <div class="action-box">
-        <a-button class="btn close" @click="$emit('update:visible', false)">取消</a-button>
+        <a-button class="btn close" @click="handleCancel">取消</a-button>
         <a-button class="btn comfirm" @click="comfirmAdd" :loading="loading">确定</a-button>
       </div>
     </a-modal>
@@ -96,7 +95,7 @@ export default defineComponent({
     const modalVal = reactive({
       roleName: undefined,
       mark: undefined,
-      power: [48, 49, 50]
+      power: [48, 49, 50, 51, 52, 53]
     })
     const state = reactive({
       expandedKeys: [],
@@ -132,6 +131,10 @@ export default defineComponent({
       state.expandedKeys = expandedKeys
       state.autoExpandParent = false
     }
+    const handleCancel = () => {
+      formRef.value.resetFields()
+      emit('update:visible', false)
+    }
     const onCheck = checkedKeys => {
       modalVal.power = checkedKeys
     }
@@ -142,10 +145,10 @@ export default defineComponent({
         if (props.type === 'add') {
           modalVal.roleName = undefined
           modalVal.mark = undefined
-          modalVal.power = [48, 49, 50]
+          modalVal.power = [48, 49, 50, 51, 52, 53]
         } else if (props.type === 'edit') {
           modalVal.roleName = props.current.name
-          modalVal.mark = props.current.explain
+          modalVal.mark = props.current.roleExplain
           modalVal.power = props.current.selected.map(item => item.permissionsId)
         }
         state.expandedKeys = []
@@ -162,7 +165,8 @@ export default defineComponent({
       onExpand,
       ...toRefs(state),
       onCheck,
-      modalTitle
+      modalTitle,
+      handleCancel
     }
   }
 })

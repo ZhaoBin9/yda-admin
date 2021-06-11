@@ -5,23 +5,24 @@ const setRouteComponent = item => {
   let routes = {
     path: item.url,
     name: item.url.split('/')[1],
-    meta: { title: item.name },
+    meta: { title: item.name || item.permissionsName },
     component: () => import(`@/views${item.url}`)
   }
-  if (!item.parentId && item.child) {
+  if ((!item.parentId || item.parentId === 1) && item.child) {
     if (item.child[0].type === 2) {
-      routes.meta.permission = item.child.map(item => item.code)
+      routes.meta.permission = item.child.map(item => item.code || item.permissionsCode)
     } else {
       routes.redirect = item.child[0].url
       routes.component = RouteView
       routes.children = []
     }
-  } else if (!item.parentId && !item.child) {
+  } else if ((!item.parentId || item.parentId === 1) && !item.child) {
     null
-  } else if (item.parentId) {
-    routes.meta.permission = item.child ? item.child.map(item => item.code) : null
+  } else if (item.parentId && item.parentId !== 1) {
+    routes.meta.permission = item.child ? item.child.map(item => item.code || item.permissionsCode) : null
     routes.name = item.url.split('/')[2]
     if (routes.name === 'apply' || routes.name === 'applyList') {
+      routes.meta.keepAlive = true
       return [
         routes,
         {
@@ -40,8 +41,8 @@ const setRouteComponent = item => {
   return [routes]
 }
 let navNum = 0
-const deepIneratorRoutes = (ineratorArr, targetArr) => {
-  ineratorArr.forEach(item => {
+const deepIneratorRoutes = (iteratorArr, targetArr) => {
+  iteratorArr.forEach(item => {
     const routes = setRouteComponent(item)
     if (item.child && item.child[0].type !== 2) {
       deepIneratorRoutes(item.child, routes[0].children)
@@ -50,14 +51,15 @@ const deepIneratorRoutes = (ineratorArr, targetArr) => {
     targetArr.push(...routes)
   })
 }
-const deepIneratorNav = (ineratorArr, targetArr) => {
-  ineratorArr.forEach(item => {
+const deepIneratorNav = (iteratorArr, targetArr) => {
+  iteratorArr.forEach(item => {
     navNum++
     const navItem = {}
     if (item.meta.title && item.children) {
       navItem.children = []
       deepIneratorNav(item.children, navItem.children)
     }
+
     navItem.key = item.name
     navItem.title = item.meta.title ? item.meta.title : item.children[0].meta.title
     navItem.path = item.path
@@ -68,6 +70,7 @@ const deepIneratorNav = (ineratorArr, targetArr) => {
 }
 const asyncRouter = async () => {
   const { data } = await getPermissionList()
+  let res = data
   const routes = {
     key: '',
     name: 'index',
@@ -80,7 +83,7 @@ const asyncRouter = async () => {
     children: []
   }
   const navList = []
-  deepIneratorRoutes(data, routes.children)
+  deepIneratorRoutes(res, routes.children)
   deepIneratorNav(routes.children, navList)
   return { routes, navList }
 }

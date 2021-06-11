@@ -1,37 +1,56 @@
 <template>
   <a-card style="margin: 40px">
     <tableHeader>
-      <a-input class="sec-input" v-model:value="searchVal" :maxlength="20" placeholder="请输入文件名称或申请人">
+      <a-input
+        class="sec-input  table-arg-margin"
+        allowClear
+        v-model:value="searchVal"
+        :maxlength="20"
+        placeholder="请输入文件名称或申请人"
+      >
         <template #prefix>
           <img src="@/assets/svg/search.svg" />
         </template>
       </a-input>
-      <span class="input-label">审批状态：</span>
+      <span style="margin-top: 10px" class="input-label table-arg-margin">审批状态：</span>
       <a-select
         v-model:value="applyStatus"
+        allowClear
         style="width: 240px;height: 36px;
         background: #ffffff;
-        border-radius: 4px;"
+        border-radius: 4px; margin-top: 10px;"
         placeholder="请选择"
       >
-        <a-select-option v-for="item in approvalList" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
+        <a-select-option v-for="(value, key) in examineStatusObj" :key="key" :value="key">{{
+          value.name
+        }}</a-select-option>
       </a-select>
-      <span class="input-label">用印状态：</span>
+      <span style="margin-top: 10px" class="input-label table-arg-margin">用印状态：</span>
       <a-select
         v-model:value="sealStatus"
+        allowClear
         style="width: 240px;height: 36px;
         background: #ffffff;
-        border-radius: 4px;"
+        border-radius: 4px; margin-top: 10px;"
         placeholder="请选择"
       >
-        <a-select-option v-for="item in fingerList" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
+        <a-select-option v-for="(value, key) in sealStatusObj" :key="key" :value="key">{{
+          value.name
+        }}</a-select-option>
       </a-select>
-      <a-button class="search-btn basic-btn" @click="searchList">查询</a-button>
-      <a-button class="export-btn basic-btn" @click="exportTable">导出</a-button>
-      <a-button class="add-btn" @click="openModal">添加申请</a-button>
+      <a-button class="search-btn basic-btn table-arg-margin" @click="searchList">查询</a-button>
+      <a-button class="export-btn basic-btn table-arg-margin" @click="exportTable">导出</a-button>
+      <a-button class="add-btn table-arg-margin" @click="openModal">添加申请</a-button>
     </tableHeader>
     <div style="height: 40px"></div>
-    <a-table :columns="columns" :dataSource="dataSource" :pagination="pagination" @change="handleTableChange">
+    <a-table
+      :columns="columns"
+      :dataSource="dataSource"
+      :pagination="pagination"
+      @change="handleTableChange"
+      :loading="tableLoading"
+    >
+      <template #id="{index}">{{ pagination.index * 10 + index - 9 }}</template>
       <template #action="{record}">
         <a @click="$router.push(`/seal/apply/detail?documentId=${record.documentId}`)">查看</a>
         <a style="dispaly: inline-block; margin-left: 15px;" @click="fileModal(record)">{{
@@ -70,60 +89,21 @@ import { applyColumns } from './columns'
 import modal from './components/modal'
 import archiveModal from '../applyList/components/modal'
 import tableHeader from '@/views/components/tableHeader'
-import { getApply, addApply, exportApply } from '@/apis/seal'
-import { getFingerProcessList, getSealProcessList, sendArchived } from '@/apis/businessManage'
+import { getApply, addApply, exportApply, sendArchived } from '@/apis/seal'
+import { getSealProcessList } from '@/apis/businessManage'
 import { cmsNotice } from '@/utils/utils'
-const approvalList = [
-  {
-    id: 1,
-    name: '审批中'
-  },
-  {
-    id: 2,
-    name: '已同意'
-  },
-  {
-    id: 3,
-    name: '已拒绝'
-  },
-  {
-    id: 4,
-    name: '已回档'
-  }
-]
-const fingerList = [
-  {
-    id: 1,
-    name: '不可用'
-  },
-  {
-    id: 2,
-    name: '待用印'
-  },
-  {
-    id: 3,
-    name: '用印中'
-  },
-  {
-    id: 4,
-    name: '待归档'
-  },
-  {
-    id: 5,
-    name: '已归档'
-  }
-]
+import { useStore } from 'vuex'
 const examineStatusObj = {
   0: {
-    name: '用印审批中',
+    name: '审批中',
     color: '#5F99FF'
   },
   1: {
-    name: '用印同意',
+    name: '同意',
     color: '#43CF75'
   },
   2: {
-    name: '用印拒绝',
+    name: '拒绝',
     color: '#C3161C'
   },
   3: {
@@ -166,12 +146,14 @@ const sealStatusObj = {
   }
 }
 export default defineComponent({
+  name: 'apply',
   components: {
     modal,
     'archive-modal': archiveModal,
     tableHeader
   },
   setup() {
+    const store = useStore()
     const state = reactive({
       searchVal: undefined,
       applyStatus: undefined,
@@ -180,7 +162,9 @@ export default defineComponent({
       pagination: {
         pageSize: 10,
         total: 0,
-        current: 1
+        current: 1,
+        'show-total': total => `总共${total}条数据`,
+        index: 0
       },
       dataSource: [],
       modalVisible: false,
@@ -188,38 +172,41 @@ export default defineComponent({
       current: undefined,
       processTypeList: [],
       processList: [],
-      loading: false
+      loading: false,
+      tableLoading: true
     })
 
     const getList = async () => {
+      state.tableLoading = true
       const params = {
         pageSize: state.pagination.pageSize,
         pageIndex: state.pagination.current,
         sealStatus: state.sealStatus,
-        searchName: state.searchVal
+        examineStatus: state.applyStatus,
+        search: state.searchVal
       }
       const res = await getApply(params)
       state.dataSource = res.data
       state.pagination.total = res.totalItem
+      state.pagination.index = res.pageIndex
+      state.tableLoading = false
     }
     const getSealProcess = async () => {
       const res = await getSealProcessList()
       state.processList = res.data
     }
-    const getFingerProcess = async () => {
-      const res = await getFingerProcessList()
-      state.processTypeList = res.data
-      state.pagination.total = res.totalItem
+    const getFingerProcess = () => {
+      state.processTypeList = store.state.globalData.applyProcessList
     }
     const openModal = () => {
       if (state.processTypeList.length === 0) {
-        cmsNotice('error', '请先上添加流程')
+        cmsNotice('error', '请先添加流程')
         return
       }
       state.modalVisible = true
     }
     const exportTable = () => {
-      window.location = exportApply()
+      window.location = exportApply({})
       setTimeout(() => {
         cmsNotice('success', '正在为您导出，请耐心等待...')
       }, 200)
@@ -266,8 +253,6 @@ export default defineComponent({
       searchList,
       exportTable,
       modalSubmit,
-      approvalList,
-      fingerList,
       openModal,
       examineStatusObj,
       sealStatusObj,

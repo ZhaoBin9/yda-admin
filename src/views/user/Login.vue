@@ -10,17 +10,30 @@
               v-model:value="state.username"
               :placeholder="state.isPassLogin ? '请输入账号' : '请输入手机号'"
               class="form-input"
+              @keyup.enter="userLogin"
             />
-            <a-input v-model:value="state.password" placeholder="请输入密码" class="form-input" type="password" />
+            <a-input
+              v-model:value="state.password"
+              placeholder="请输入密码"
+              class="form-input"
+              type="password"
+              @keyup.enter="userLogin"
+            />
           </div>
           <div class="form-items" v-else>
-            <a-input v-model:value="state.username" placeholder="请输入账号" class="form-input" />
+            <a-input
+              v-model:value="state.username"
+              @keyup.enter="userLogin"
+              placeholder="请输入账号"
+              class="form-input"
+            />
             <a-form-item name="captcha">
               <a-input
                 v-model:value="formModel.captcha"
                 :maxlength="6"
                 placeholder="请输入验证码"
                 class="form-input form-captcha"
+                @keyup.enter="userLogin"
               />
               <a-button :disabled="state.captchaText !== '获取验证码'" class="get-captcha" @click="getCaptcha">{{
                 state.captchaText
@@ -33,13 +46,11 @@
           state.logining ? '登录中' : '登录'
         }}</a-button>
         <p @click="switchLoginMode" class="form-switch">{{ state.isPassLogin ? '手机验证码登录' : '账号密码登录' }}</p>
+
+        <p class="tips">温馨提示：</p>
+        <p class="tips">该产品不支持注册，您可拨打0571-59985679联系我们</p>
       </section>
     </section>
-    <company-modal
-      v-model:visible="state.enterpriseVisible"
-      :allEnterprise="state.allEnterprise"
-      @select-enterprise="selectEnterprise"
-    />
   </section>
 </template>
 
@@ -48,18 +59,13 @@ import { reactive, defineComponent, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { notification } from 'ant-design-vue'
 import { passLogin, getAccountCaptcha } from '@/apis/user'
-import companyModal from './components/companyModal'
 import { useStore } from 'vuex'
 import { SET_USER_INFO } from '@/store/user/mutations-type'
-import { SET_NAV_MENU } from '@/store/navigation/mutations-type'
 import { SET_ROUTER } from '@/store/router/mutations-type'
-import asyncRouter from '@/router/async-router'
+import { SET_APPLY_PROCESS_LIST } from '@/store/globalData/mutations-type'
 
 export default defineComponent({
   name: 'Login',
-  components: {
-    companyModal
-  },
   setup() {
     const router = useRouter()
     const route = useRoute()
@@ -89,18 +95,6 @@ export default defineComponent({
     const formModel = reactive({
       captcha: undefined
     })
-    const handleInitFn = () => {
-      if (route.fullPath.includes('switch') && localStorage.getItem('yda-admin-userInfo')) {
-        !store.state.user.userInfo.userName &&
-          store.commit(`user/${SET_USER_INFO}`, JSON.parse(localStorage.getItem('yda-admin-userInfo')))
-        state.userInfo = store.state.user.userInfo
-        state.allEnterprise = store.state.user.userInfo.allEnterprise
-        state.enterpriseVisible = true
-      }
-      state.redirect = route.query.redirect
-    }
-
-    handleInitFn()
 
     const cmsNotice = (type, contant, duration = 4) => {
       notification[type]({
@@ -109,23 +103,23 @@ export default defineComponent({
         duration
       })
     }
-
-    const selectEnterprise = async enterpriseInfo => {
-      state.userInfo = {
-        ...state.userInfo,
-        enterpriseName: enterpriseInfo.name,
-        enterpriseId: enterpriseInfo.id
-      }
-      if (!store.state.user.userInfo.userName) {
-        localStorage.setItem('yda-admin-userInfo', JSON.stringify(state.userInfo))
-        store.commit(`user/${SET_USER_INFO}`, state.userInfo)
-      }
-      const { routes, navList } = await asyncRouter()
-      store.commit(`nav/${SET_NAV_MENU}`, navList)
-      store.commit(`router/${SET_ROUTER}`, [routes])
-      router.addRoute(routes)
-      cmsNotice('success', '选择成功，即将跳转', 0.5)
-      router.push(state.redirect ?? '/dashboard/ayalysis')
+    const cacheUserInfo = async () => {
+      localStorage.setItem('yda-admin-userInfo', JSON.stringify(state.userInfo))
+      store.commit(`user/${SET_USER_INFO}`, state.userInfo)
+      await new Promise(resolve => {
+        store.dispatch(`router/${SET_ROUTER}`, resolve)
+      })
+      store.dispatch(`globalData/${SET_APPLY_PROCESS_LIST}`)
+    }
+    const validateRedirectPath = () => {
+      const routerObj = router.getRoutes()
+      let isHasHome = false
+      routerObj.forEach(item => {
+        if (item.path === '/dashboard/analysis') {
+          isHasHome = true
+        }
+      })
+      router.push(isHasHome ? '/dashboard/analysis' : '/seal/apply')
     }
 
     const setUserInfo = async res => {
@@ -146,16 +140,9 @@ export default defineComponent({
           enterpriseName: res.result.enterpriseName,
           enterpriseId: res.result.enterpriseId
         }
-        if (!store.state.user.userInfo.userName) {
-          localStorage.setItem('yda-admin-userInfo', JSON.stringify(state.userInfo))
-          store.commit(`user/${SET_USER_INFO}`, state.userInfo)
-        }
-        const { routes, navList } = await asyncRouter()
-        store.commit(`nav/${SET_NAV_MENU}`, navList)
-        store.commit(`router/${SET_ROUTER}`, [routes])
-        router.addRoute(routes)
+        await cacheUserInfo()
+        validateRedirectPath()
         cmsNotice('success', '登录成功')
-        router.push(state.redirect ?? '/dashboard/ayalysis')
       } else {
         state.allEnterprise = res.result.allEnterprise
         state.enterpriseVisible = true
@@ -164,7 +151,7 @@ export default defineComponent({
     const loginFn = () => {
       state.logining = true
       const params = {
-        username: state.username,
+        username: state.username.trim(),
         json: 1,
         loginType: 3,
         from: 1,
@@ -172,9 +159,9 @@ export default defineComponent({
         encrypt: false
       }
       if (state.isPassLogin) {
-        params.password = state.password
+        params.password = state.password.trim()
       } else {
-        params.note = formModel.captcha
+        params.note = formModel.captcha.trim()
         params.loginType = 1
       }
       passLogin(params)
@@ -204,8 +191,12 @@ export default defineComponent({
         cmsNotice('error', '验证码错误')
         return
       }
-      if (state.captcha === '验证码失效，请重新发送') {
-        cmsNotice('error', state.captcha)
+      // if (state.captcha === '验证码失效，请重新发送') {
+      //   cmsNotice('error', state.captcha)
+      //   return
+      // }
+      if (state.captcha && state.captcha !== formModel.captcha) {
+        cmsNotice('error', '验证码错误')
         return
       }
       loginFn()
@@ -216,19 +207,23 @@ export default defineComponent({
         cmsNotice('error', '请输入账号')
         return
       }
+      if (!/^1(3|4|5|6|7|8|9)\d{9}$/.test(state.username)) {
+        cmsNotice('error', '请输入正确的手机号')
+        return
+      }
       let num = 60
       state.captchaText = `${num--}s`
       state.timer = setInterval(() => {
         if (num === -1) {
           clearInterval(state.timer)
           state.captchaText = '获取验证码'
-          state.captcha = '验证码失效，请重新发送'
+          // state.captcha = '验证码失效，请重新发送'
           return
         }
         state.captchaText = `${num--}s`
       }, 1000)
       const res = await getAccountCaptcha({ phone: state.username, code: 'LOGIN_SEND' })
-      state.captcha = res.data
+      state.captcha = res.data ? res.data + '' : null
     }
 
     const userLogin = () => {
@@ -300,7 +295,7 @@ export default defineComponent({
       align-items: center;
       .form-title {
         width: 228px;
-        height: 80px;
+        height: 105px;
         margin-bottom: 80px;
         display: block;
       }
@@ -361,6 +356,16 @@ export default defineComponent({
         padding-right: 16px;
         cursor: pointer;
       }
+    }
+    .tips {
+      width: 100%;
+      height: 24px;
+      font-size: 14px;
+      font-family: PingFangSC, PingFangSC-Regular;
+      font-weight: 400;
+      text-align: left;
+      color: #bdbdbd;
+      line-height: 24px;
     }
   }
 }

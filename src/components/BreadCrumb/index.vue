@@ -18,6 +18,9 @@ export default {
       () => $route.fullPath,
       () => {
         breadList.value = []
+        if ($route.path === '/seal/applyList/detail') {
+          $route.matched[2].meta.title = '用印记录,' + ($route.query.id ? '普通用印详情' : '指纹用印详情')
+        }
         $route.matched.slice(1).forEach(item => {
           item.meta.title && breadList.value.push(...item.meta.title.split(','))
         })

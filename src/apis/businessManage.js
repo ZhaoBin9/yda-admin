@@ -98,7 +98,7 @@ export function importDepartment(params) {
   return request({
     url: `${api.department}/importDepartment`,
     method: 'POST',
-    data: params
+    params
   })
 }
 
@@ -167,7 +167,7 @@ export function importUser(params) {
   return request({
     url: `${api.user}/importUser`,
     method: 'POST',
-    data: params
+    params: { ...params, timeout: 600000 }
   })
 }
 
@@ -232,7 +232,7 @@ export function addProcess(params) {
 export function editProcess(params) {
   return request({
     url: `${api.process}`,
-    method: 'POST',
+    method: 'PUT',
     headers: {
       'Content-Type': 'application/json'
     },
@@ -293,6 +293,14 @@ export function getFingerList(params) {
   return request({
     url: `/fingerprintPc/selectPageResultByQuery`,
     method: 'POST',
+    params
+  })
+}
+// 校验流程名字是否重复
+export function validateProcessName(params) {
+  return request({
+    url: `${api.process}/details/selectFlowDtoFlowName`,
+    method: 'PUT',
     params
   })
 }

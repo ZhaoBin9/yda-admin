@@ -31,7 +31,8 @@ import {
   Tree,
   Cascader,
   Dropdown,
-  Breadcrumb
+  Breadcrumb,
+  Spin
 } from 'ant-design-vue'
 import './permission' // 全局路由守卫 权限控制
 import './global.scss' // 全局样式
@@ -75,5 +76,6 @@ createApp(App)
   .use(Cascader)
   .use(Dropdown)
   .use(Breadcrumb)
+  .use(Spin)
   .use(router)
   .mount('#app')

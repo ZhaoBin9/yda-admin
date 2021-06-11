@@ -13,8 +13,11 @@ export default {}
   height: 36px !important;
 }
 .coms-table-header {
+  .table-arg-margin {
+    margin-top: 10px;
+  }
   > .sec-input {
-    width: 240px;
+    width: 230px;
     height: 36px;
     opacity: 1;
     background: #ffffff;
@@ -28,7 +31,7 @@ export default {}
     color: #333333;
     line-height: 36px;
     display: inline-block;
-    margin: 0 8px 0 20px;
+    margin: 0 8px;
   }
   > .basic-btn {
     // width: 80px;

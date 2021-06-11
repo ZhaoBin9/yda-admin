@@ -1,7 +1,7 @@
 <template>
   <a-card style="margin: 40px">
     <tableHeader>
-      <a-input class="sec-input" :maxlength="20" v-model:value="searchVal" placeholder="输入印章名称">
+      <a-input class="sec-input" allowClear :maxlength="20" v-model:value="searchVal" placeholder="输入印章名称">
         <template #prefix>
           <img src="@/assets/svg/search.svg" />
         </template>
@@ -21,7 +21,17 @@
       <a-button class="add-btn" v-btn="'add'" @click="openModal('add')">添加印章</a-button>
     </tableHeader>
     <div style="height: 40px"></div>
-    <a-table :columns="managementColumns" :dataSource="dataSource" @change="handleTableChange">
+    <a-table
+      :columns="managementColumns"
+      :dataSource="dataSource"
+      :pagination="pagination"
+      @change="handleTableChange"
+      :loading="tableLoading"
+    >
+      <template #id="{index}">{{ pagination.index * 10 + index - 9 }}</template>
+      <template #number="{text, record}">
+        {{ record.status === 0 ? '未装在设备上' : text ? text : '' }}
+      </template>
       <template #status="{text}">
         {{ text === 0 ? '停用' : '启用' }}
       </template>
@@ -77,16 +87,20 @@ export default defineComponent({
       visible: false,
       current: undefined,
       pagination: {
-        current: 1,
         pageSize: 10,
-        total: 0
+        total: 0,
+        current: 1,
+        'show-total': total => `总共${total}条数据`,
+        index: 0
       },
       actionType: 'add',
       loading: false,
-      staffList: []
+      staffList: [],
+      tableLoading: true
     })
 
     const getList = async () => {
+      state.tableLoading = true
       const params = {
         status: state.applyStatus,
         searchName: state.searchVal,
@@ -96,6 +110,8 @@ export default defineComponent({
       const res = await getSealList(params)
       state.dataSource = res.data
       state.pagination.total = res.totalItem
+      state.pagination.index = res.pageIndex
+      state.tableLoading = false
     }
     const getStaffData = async () => {
       const res = await getStaffList()
@@ -114,7 +130,7 @@ export default defineComponent({
         delete() {
           Modal.confirm({
             title: '提示',
-            content: '确定删除该部门吗？',
+            content: '确定删除该印章吗？',
             centered: true,
             confirmLoading: state.loading,
             onOk: async () => {

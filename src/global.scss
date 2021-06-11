@@ -64,7 +64,9 @@ body {
     width: 100vw;
     height: 100vh;
   }
+  
 }
+
 .scroll-bar-hide {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -86,4 +88,24 @@ body {
   }    
   overflow: auto;  
 }
+
+.ant-cascader-menu {
+  &::-webkit-scrollbar {
+    display: block;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: rgb(202, 202, 202);
+    border-radius: 2px;
+  }
+}
+.show-scrollbar {
+  &::-webkit-scrollbar {
+    display: block;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: rgb(202, 202, 202);
+    border-radius: 2px;
+  }
+}
+
 

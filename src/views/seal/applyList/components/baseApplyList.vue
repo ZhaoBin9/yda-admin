@@ -1,7 +1,13 @@
 <template>
   <a-card>
     <tableHeader class="table-header">
-      <a-input class="sec-input" :maxlength="20" v-model:value="searchVal" placeholder="请输入文件名称或申请人">
+      <a-input
+        class="sec-input"
+        allowClear
+        :maxlength="20"
+        v-model:value="searchVal"
+        placeholder="请输入文件名称或申请人"
+      >
         <template #prefix>
           <img src="@/assets/svg/search.svg" />
         </template>
@@ -9,6 +15,7 @@
       <span class="input-label">用印状态：</span>
       <a-select
         v-model:value="sealStatus"
+        allowClear
         style="width: 240px;height: 36px;
         background: #ffffff;
         border-radius: 4px;"
@@ -20,11 +27,18 @@
       <a-button class="export-btn basic-btn" @click="exportTable">导出</a-button>
     </tableHeader>
     <div style="height: 40px"></div>
-    <a-table :columns="baseColumns" :dataSource="dataSource" :pagination="pagination" @change="handleTableChange">
+    <a-table
+      :columns="baseColumns"
+      :dataSource="dataSource"
+      :pagination="pagination"
+      @change="handleTableChange"
+      :loading="tableLoading"
+    >
+      <template #id="{index}">{{ pagination.index * 10 + index - 9 }}</template>
       <template #count>1</template>
       <template #examineStatus="{text}">
-        <span :style="{ background: examineStatusObj[text]?.color }" class="dottos"></span
-        ><span>{{ examineStatusObj[text]?.name }}</span>
+        <span v-if="text" :style="{ background: examineStatusObj[text]?.color }" class="dottos"></span
+        ><span>{{ text ? examineStatusObj[text]?.name : '--' }}</span>
       </template>
       <template #sealStatus="{text}">
         <span :style="{ background: sealStatusObj[text]?.color }" class="dottos"></span
@@ -47,18 +61,6 @@ import tableHeader from '@/views/components/tableHeader'
 import { getApplyList, exportBaseList } from '@/apis/seal'
 import { cmsNotice } from '@/utils/utils'
 const typeList = [
-  {
-    id: 0,
-    name: '不可用'
-  },
-  {
-    id: 1,
-    name: '待用印'
-  },
-  {
-    id: 2,
-    name: '用印中'
-  },
   {
     id: 3,
     name: '待归档'
@@ -100,15 +102,15 @@ const statusObj = {
 }
 const examineStatusObj = {
   0: {
-    name: '用印审批中',
+    name: '审批中',
     color: '#5F99FF'
   },
   1: {
-    name: '用印同意',
+    name: '同意',
     color: '#43CF75'
   },
   2: {
-    name: '用印拒绝',
+    name: '拒绝',
     color: '#C3161C'
   },
   3: {
@@ -160,6 +162,9 @@ export default defineComponent({
     reload: {
       type: Boolean,
       default: false
+    },
+    status: {
+      default: undefined
     }
   },
   components: {
@@ -168,44 +173,38 @@ export default defineComponent({
   setup(props) {
     const state = reactive({
       searchVal: undefined,
-      sealStatus: undefined,
+      sealStatus: props.status,
       pagination: {
         current: 1,
         pageSize: 10,
-        total: 0
+        total: 0,
+        'show-total': total => `总共${total}条数据`,
+        index: 0
       },
-      dataSource: [
-        {
-          key: '1',
-          id: 1,
-          file: '项目招标书',
-          name: 'jejdssd',
-          apply: 'sdjkkdsj',
-          count: 12,
-          time: '2021-01-27 15:00:00',
-          status: 'sajksajkksja',
-          sta: 'sdmksd'
-        }
-      ],
-      baseColumns
+      dataSource: [],
+      baseColumns,
+      tableLoading: true
     })
     const getList = async () => {
+      state.tableLoading = true
       const params = {
         sealStatus: state.sealStatus,
-        searchName: state.searchVal,
+        search: state.searchVal,
         pageIndex: state.pagination.current,
         pageSize: state.pagination.pageSize
       }
       const res = await getApplyList(params)
       state.dataSource = res.data
       state.pagination.total = res.totalItem
+      state.pagination.index = res.pageIndex
+      state.tableLoading = false
     }
     const handleTableChange = ({ current }) => {
       state.pagination.current = current
       getList()
     }
     const exportTable = () => {
-      window.location = exportBaseList()
+      window.location = exportBaseList({})
       setTimeout(() => {
         cmsNotice('success', '正在为您导出，请耐心等待...')
       }, 200)

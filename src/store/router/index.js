@@ -4,7 +4,8 @@ import getters from './getters'
 const router = {
   namespaced: true,
   state: {
-    routers: []
+    routers: [], // 路由权限
+    navMenus: [] // 菜单
   },
   mutations,
   actions,

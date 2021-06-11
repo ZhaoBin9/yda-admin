@@ -1,7 +1,7 @@
 <script>
 import { useStore } from 'vuex'
 import { useRouter, useRoute } from 'vue-router'
-import { computed, onMounted, reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import Menu from 'ant-design-vue/es/menu'
 const { Item, SubMenu } = Menu
 const iconPathObj = {
@@ -20,7 +20,7 @@ export default {
     const $router = useRouter()
     const $route = useRoute()
     const state = reactive({
-      navData: computed(() => $store.state.nav.navMenus),
+      navData: computed(() => $store.state.router.navMenus),
       openKeys: [],
       selectedKeys: []
     })
@@ -62,7 +62,9 @@ export default {
     watch(
       () => $route.fullPath,
       () => {
+        if ($route.matched.length === 0) return []
         if ($route.matched[$route.matched.length - 1].name !== state.selectedKeys[0]) {
+          // 点击历史返回的情况
           if ($route.matched.length === 2) {
             state.selectedKeys = [$route.matched[1].name]
           } else if ($route.matched.length === 3) {
@@ -105,18 +107,21 @@ export default {
   width: 240px;
   height: 100%;
   border-right: 1px solid #f0f0f0;
+  z-index: 100;
+  box-shadow: 0px 0px 8px 1px #bbb;
+  background-color: #fff;
   .title {
     margin: 26px auto;
     width: 120px;
     .nav-title {
       display: block;
       width: 120px;
-      height: 40px;
+      height: 56px;
     }
   }
   .ant-menu-root {
     position: absolute;
-    top: 112px;
+    top: 128px;
     bottom: 0;
     overflow-y: auto;
     overflow-x: hidden;

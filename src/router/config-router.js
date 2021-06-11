@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import BasicLayout from '@/layout/BasicLayout'
-
 // 配置路由
 const routes = [
   {
@@ -9,7 +7,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (about.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "login" */ '@/views/user/Login')
+    component: () => import(/* webpackChunkName: "login" */ '@/views/User/Login')
   },
   {
     path: '/personalCenter',
@@ -25,7 +23,7 @@ const routes = [
     // route level code-splitting
     // this generates a separate chunk (about.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "404" */ '@/views/error/404')
+    component: () => import(/* webpackChunkName: "404" */ '@/views/Error/404')
   }
 ]
 

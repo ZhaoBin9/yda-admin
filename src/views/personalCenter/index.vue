@@ -7,7 +7,7 @@
       </div>
     </header>
     <section class="avatar">
-      <img class="img" :src="avatar || require('@/assets/images/login-figure.png')" alt="" />
+      <img class="img" :src="avatar || require('@/assets/images/default-avatar.png')" alt="" />
       <a-upload
         v-model:file-list="fileList"
         name="file"
@@ -91,6 +91,7 @@ import { editAccountPassword, editAccount, getAccountCaptcha, editAccountAvatar 
 import { cmsNotice } from '@/utils/utils'
 const action = process.env.VUE_APP_API_BASE_URL + '/file/upload/one'
 export default defineComponent({
+  name: 'personalCenter',
   setup() {
     const store = useStore()
     const state = reactive({
@@ -188,7 +189,7 @@ export default defineComponent({
         state.captchaText = `${num--}s`
       }, 1000)
       const res = await getAccountCaptcha({ phone: formModel.account, code: 'MODIFY_MOBILE' })
-      state.captcha = res.data
+      state.captcha = typeof res.data === 'number' ? res.data : true
     }
     const modalSubmit = () => {
       formRef.value
@@ -205,6 +206,11 @@ export default defineComponent({
               cmsNotice('error', state.captcha)
               state.loading = false
               formModel.captcha = undefined
+              return
+            }
+            if (typeof state.captcha === 'number' && state.captcha !== ~~formModel.captcha) {
+              cmsNotice('error', '验证码错误')
+              state.loading = false
               return
             }
             const res = await editAccount({
@@ -336,10 +342,10 @@ export default defineComponent({
     position: relative;
     margin: 0 auto;
     margin-bottom: 34px;
+    object-fit: cover;
     .img {
       width: 100%;
       height: 100%;
-      cursor: pointer;
     }
     .edit-text {
       position: absolute;

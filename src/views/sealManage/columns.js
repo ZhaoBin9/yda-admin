@@ -3,7 +3,8 @@ export const managementColumns = [
     title: '序号',
     dataIndex: 'id',
     key: 'id',
-    align: 'center'
+    align: 'center',
+    slots: { customRender: 'id' }
   },
   {
     title: '印章名称',
@@ -19,9 +20,10 @@ export const managementColumns = [
   },
   {
     title: '所在设备编号',
-    dataIndex: 'custodianId',
-    key: 'custodianId',
-    align: 'center'
+    dataIndex: 'number',
+    key: 'number',
+    align: 'center',
+    slots: { customRender: 'number' }
   },
   {
     title: '印章状态',

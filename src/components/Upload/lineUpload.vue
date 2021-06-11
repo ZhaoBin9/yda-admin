@@ -2,15 +2,10 @@
   <a-upload
     v-model:file-list="state.fileList"
     name="file"
-    :multiple="true"
-    :action="state.action"
+    :action="state.action + '?width=88&height=88'"
     withCredentials
-    :headers="{
-      authorization: 'authorization-text'
-    }"
     :before-upload="beforeUpload"
     @change="handleChange"
-    @preview="handleRemove"
   >
     <a-button class="btn" v-if="state.fileList && state.fileList.length < state.count">
       <img
@@ -20,7 +15,7 @@
       上传附件
     </a-button>
   </a-upload>
-  <p class="tips">（可上传图片、文档等类型文件，单个文件大小不能超过50M）</p>
+  <p class="tips">{{ state.uploadText || '（可上传图片、文档等类型文件，单个文件大小不能超过10M）' }}</p>
 </template>
 
 <script>
@@ -33,13 +28,16 @@ export default defineComponent({
     count: Number,
     fileType: {
       type: Array,
-      default: () => ['jpg', 'png', 'tif', 'jpeg', 'bmp']
+      default: () => ['jpg', 'png', 'tif', 'jpeg', 'bmp', 'webp']
     },
     action: {
       type: String,
       default: action
     },
-    size: Number,
+    size: {
+      type: Number,
+      default: 10
+    },
     uploadText: String
   },
   setup(props, ctx) {
@@ -96,19 +94,21 @@ export default defineComponent({
           break
       }
     }
-    const handleRemove = info => {
-      const index = state.fileList.findIndex(item => item.uid === info.uid)
-      const list = state.fileList
-      list.splice(index, 1)
-      Object.assign(state.fileList, list)
-      emit('change', 'remove', info)
+
+    const transformFile = file => {
+      const fileData = new FormData()
+      fileData.append('width', 120)
+      fileData.append('file', file)
+      fileData.append('height', 120)
+      console.log(file)
+      return fileData
     }
 
     return {
       beforeUpload,
       handleChange,
-      handleRemove,
-      state
+      state,
+      transformFile
     }
   }
 })

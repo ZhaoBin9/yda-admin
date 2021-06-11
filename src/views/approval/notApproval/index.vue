@@ -1,18 +1,19 @@
 <template>
   <a-card style="margin: 40px">
     <tableHeader>
-      <a-input class="sec-input" v-model:value="searchVal" :maxlength="20" placeholder="输入关键字查询">
+      <a-input class="sec-input" allowClear v-model:value="searchVal" :maxlength="20" placeholder="请输入关键字查询">
         <template #prefix>
           <img src="@/assets/svg/search.svg" />
         </template>
       </a-input>
       <span class="input-label">审批类型：</span>
       <a-select
-        v-model:value="applyStatus"
+        v-model:value="sealStatus"
+        allowClear
         style="width: 240px;height: 36px;
         background: #ffffff;
         border-radius: 4px;"
-        placeholder="选择审批类型"
+        placeholder="请选择审批类型"
       >
         <a-select-option v-for="item in examineTypeList" :key="item.id" :value="item.id">{{
           item.name
@@ -21,7 +22,15 @@
       <a-button class="search-btn basic-btn" @click="searchList">查询</a-button>
     </tableHeader>
     <div style="height: 40px"></div>
-    <a-table :columns="notApprovalColumns" :dataSource="dataSource">
+    <a-table
+      :columns="notApprovalColumns"
+      :pagination="pagination"
+      :dataSource="dataSource"
+      @change="handleTableChange"
+      :loading="tableLoading"
+    >
+      <template #fileName="{text}">{{ text ? text : '--' }}</template>
+      <template #id="{index}">{{ pagination.index * 10 + index - 9 }}</template>
       <template #examineType="{text}">{{ text === 1 ? '用印审批' : '归档审批' }}</template>
       <template #action="{ record }"><a @click="openModal(record)">审批</a></template>
     </a-table>
@@ -30,6 +39,7 @@
       :isApproval="true"
       @modalSubmit="modalSubmit"
       :current="current"
+      :currentLoading="currentLoading"
       v-model:loading="loading"
     />
   </a-card>
@@ -40,8 +50,10 @@ import { defineComponent, onMounted, reactive, toRefs } from 'vue'
 import { notApprovalColumns } from '../columns'
 import modal from '../components/modal'
 import tableHeader from '@/views/components/tableHeader'
-import { getNotApprovalList, getNotApprovalDetail, sendApprovalResult, getNotArchivedDetail } from '@/apis/approval'
+import { getNotApprovalList, getApprovedDetail, sendApprovalResult } from '@/apis/approval'
 import { cmsNotice } from '@/utils/utils'
+import { useStore } from 'vuex'
+import { SET_APPLY_UPDATE } from '@/store/globalData/mutations-type'
 const examineTypeList = [
   {
     id: 1,
@@ -64,17 +76,22 @@ export default defineComponent({
       sealStatus: undefined,
       notApprovalColumns,
       pagination: {
-        current: 1,
         pageSize: 10,
-        total: 0
+        total: 0,
+        current: 1,
+        'show-total': total => `总共${total}条数据`,
+        index: 0
       },
       dataSource: [],
       visible: false,
       current: undefined,
-      loading: false
+      loading: false,
+      tableLoading: true,
+      currentLoading: false
     })
 
     const getList = async () => {
+      state.tableLoading = true
       const params = {
         pageIndex: state.pagination.current,
         pageSize: state.pagination.pageSize,
@@ -85,20 +102,23 @@ export default defineComponent({
       const res = await getNotApprovalList(params)
       state.dataSource = res.data
       state.pagination.total = res.totalItem
+      state.pagination.index = res.pageIndex
+      state.tableLoading = false
     }
     const searchList = () => {
       state.pagination.current = 1
       getList()
     }
-    const getApprovalDetailType = current => {
-      if (current.examineType === 1)
-        return getNotApprovalDetail({ documentId: current.documentId, examineType: current.examineType })
-      return getNotArchivedDetail({ documentId: current.documentId, examineType: current.examineType })
+    const handleTableChange = ({ current }) => {
+      state.pagination.current = current
+      getList()
     }
     const openModal = async current => {
       state.visible = true
-      const res = await getApprovalDetailType(current)
-      state.current = res.data
+      state.currentLoading = true
+      const res = await getApprovedDetail({ documentId: current.documentId })
+      state.current = { ...res.data, examineType: current.examineType, documentId: current.documentId }
+      state.currentLoading = false
     }
     const modalSubmit = async (status, opinion) => {
       const res = await sendApprovalResult({
@@ -125,6 +145,7 @@ export default defineComponent({
       openModal,
       examineTypeList,
       searchList,
+      handleTableChange,
       modalSubmit
     }
   }

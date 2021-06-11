@@ -5,7 +5,7 @@
       :width="786"
       :title="modalTitle"
       :visible="visible"
-      @cancel="$emit('update:visible', false)"
+      @cancel="handleCancel"
       :footer="null"
       :getContainer="() => $refs.parent"
     >
@@ -13,7 +13,7 @@
         <a-form ref="formRef" :rules="rules" :model="modalVal">
           <div v-if="types === 'pass'">
             <a-form-item label="新密码" name="pass" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-              <a-input v-model:value="modalVal.pass" />
+              <a-input placeholder="请输入新密码" v-model:value="modalVal.pass" />
             </a-form-item>
             <p class="tips">
               温馨提示：重置密码后请告知员工，以确保其正常登录
@@ -27,14 +27,26 @@
               :labelCol="{ span: 4, offset: 2 }"
               :wrapperCol="{ span: 14 }"
             >
-              <a-input :maxlength="10" v-model:value="modalVal.staffName" />
+              <a-input :maxlength="30" placeholder="请输入员工姓名" v-model:value="modalVal.staffName" />
             </a-form-item>
             <a-form-item label="账号" name="account" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-              <a-input :maxlength="30" v-model:value="modalVal.account" />
+              <a-input
+                v-if="types === 'edit'"
+                disabled="true"
+                :maxlength="30"
+                placeholder="请输入员工手机号用于登录账号"
+                v-model:value="modalVal.account"
+              />
+              <a-input
+                v-else
+                :maxlength="30"
+                placeholder="请输入员工手机号用于登录账号"
+                v-model:value="modalVal.account"
+              />
             </a-form-item>
             <p class="tips">默认密码123456，如果该用户已存在其他企业，使用原密码</p>
             <a-form-item label="角色" name="role" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-              <a-select v-model:value="modalVal.role" mode="multiple" placeholder="选择角色">
+              <a-select v-model:value="modalVal.role" :mode="multiple" placeholder="请选择角色">
                 <a-select-option v-for="item in roleList" :value="item.id" :key="item.id">{{
                   item.name
                 }}</a-select-option>
@@ -45,39 +57,82 @@
                 changeOnSelect
                 v-model:value="modalVal.department"
                 :options="organizationalList"
-                placeholder="选择部门"
+                placeholder="请选择部门"
+                :getPopupContainer="node => node.parentNode"
+                showSearch
               />
             </a-form-item>
           </div>
         </a-form>
       </section>
       <section style="margin-left: 130px" v-else-if="types === 'lbw-import'">
-        <a-input class="search-input" placeholder="请输入您要查找的姓名或手机号" v-model:value.lazy="state.lbwVal">
+        <section style="margin-bottom: 10px" v-if="state.lbwList.length">
+          <a-input class="search-input" style="width: 250px" v-model:value="check.searchLbwVal">
+            <template #prefix> <img src="@/assets/svg/search.svg" /> </template>
+          </a-input>
+          <a-button type="primary" class="btn search-btn" @click="searchLbwList">查找</a-button>
+        </section>
+        <div
+          style=" padding-left: 20px; padding-bottom: 20px;  overflow-y: scroll;"
+          v-show="check.searchLbwList.length"
+        >
+          <a-checkbox :indeterminate="check.indeterminate" :checked="check.checkAll" @change="onCheckAllChange">
+            全选
+          </a-checkbox>
+          <a-checkbox-group :value="check.checkedList">
+            <virtual-list
+              :list="check.searchLbwList"
+              :size="52"
+              :remain="10"
+              :visible="approvalVisible"
+              :isScrollTop="isVirtualListScroll"
+            >
+              <template #default="{item}">
+                <approval-staff-item :item="item" :onChange="onChange" />
+              </template>
+            </virtual-list>
+          </a-checkbox-group>
+        </div>
+        <div style="line-height: 200px; text-align: center;" v-show="!check.searchLbwList.length">
+          暂无导入人
+        </div>
+        <!-- <a-input
+          class="search-input"
+          :maxlength="20"
+          placeholder="请输入您要查找的姓名或手机号"
+          v-model:value="state.lbwVal"
+        >
           <template #prefix>
             <img src="@/assets/svg/search.svg" />
           </template>
         </a-input>
+        <a-button class="search-btn" @click="searchLwbList">查询</a-button>
         <div style="margin-top: 30px; padding-left: 20px; padding-bottom: 20px; max-height: 400px; overflow-y: scroll;">
           <a-checkbox :indeterminate="check.indeterminate" :checked="check.checkAll" @change="onCheckAllChange">
             全选
           </a-checkbox>
-          <a-checkbox-group v-model:value="check.checkedList" :options="state.lbwList" @change="onChange" />
-        </div>
+          <a-checkbox-group v-model:value="check.checkedList" :options="state.searchList" @change="onChange" />
+        </div> -->
       </section>
       <section v-else>
         <a-form-item label="下载模板" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-          <a>点此下载批量导入Excel模版文件</a>
+          <a @click="downLoadExample">点此下载批量导入Excel模版文件</a>
         </a-form-item>
         <a-form-item label="上传附件" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-          <delay-upload v-model:fileList="state.fileList" :action="state.action" :tips="false" ref="uploadRef" />
+          <delay-upload
+            v-model:fileList="state.fileList"
+            :callback="getFile"
+            :action="state.action"
+            :tips="false"
+            ref="uploadRef"
+          />
         </a-form-item>
         <p class="tips">批量导入说明：</p>
         <br />
         <p class="tips">1.请下载模板，使用Excel等软件按模板的格式进行填写。不得删除、修改excel列顺序</p>
-        <p class="tips">2.密码长度为6-16个字符</p>
       </section>
       <div class="action-box">
-        <a-button class="btn close" @click="$emit('update:visible', false)">取消</a-button>
+        <a-button class="btn close" @click="handleCancel">取消</a-button>
         <a-button class="btn comfirm" :loading="loading" @click="comfirmAdd">确定</a-button>
       </div>
     </a-modal>
@@ -88,9 +143,16 @@
 import { defineComponent, reactive, ref, computed, watch, onMounted } from 'vue'
 import DelayUpload from '@/components/Upload/delayUpload'
 import { getLbwList } from '@/apis/businessManage'
+import { cmsNotice } from '@/utils/utils'
+import VirtualList from '@/components/VirtualList'
+import ApprovalStaffItem from '@/components/VirtualList/approvalStaffItem'
+import { useCheckStateAndEvent } from '@/utils/hooks'
+
 export default defineComponent({
   components: {
-    DelayUpload
+    DelayUpload,
+    VirtualList,
+    ApprovalStaffItem
   },
   props: {
     visible: {
@@ -138,10 +200,19 @@ export default defineComponent({
     }
     const state = reactive({
       fileList: [],
-      lbwList: [],
-      lbwVal: undefined
+      lbwList: []
     })
-    const searchLwbList = computed(() => state.lbwList.filter(item => item.includes(state.lbwVal)))
+    let fileRef = ref()
+    const searchLbwList = () => {
+      if (!check.searchLbwVal) {
+        check.searchLbwList = check.lbwList.map(item => item)
+        return
+      }
+      const searchNameList = state.lbwList.filter(item => item.name.includes(state.searchLbwVal))
+      const searchPhoneList = state.lbwList.filter(item => item.mobile.includes(state.searchLbwVal))
+      const filterList = Array.from(new Set([...searchNameList, ...searchPhoneList]))
+      check.searchLbwList = filterList
+    }
 
     const modalTitle = computed(() => titleObj[props.types])
     const formRef = ref()
@@ -157,7 +228,7 @@ export default defineComponent({
       staffName: [
         {
           required: true,
-          message: '请输入员工'
+          message: '请输入员工姓名'
         }
       ],
       account: [
@@ -170,7 +241,7 @@ export default defineComponent({
         {
           type: 'array',
           required: true,
-          message: '请输入部门'
+          message: '请选择部门'
         }
       ],
       pass: [
@@ -180,9 +251,24 @@ export default defineComponent({
         }
       ]
     }
+    const { check, onChange, onCheckAllChange } = useCheckStateAndEvent()
     const getLbwData = async () => {
       const res = await getLbwList()
-      state.lbwList = res.data.map((item, index) => ({ ...item, value: index, label: item.name }))
+      state.lbwList = res.success
+        ? res.data.map(item => ({
+            ...item,
+            value: item.userId,
+            label: item.name + `（${item.mobile}）`
+          }))
+        : []
+      check.searchLbwList = state.lbwList.map(item => item)
+    }
+    const downLoadExample = () => {
+      cmsNotice('success', '正在为您下载，请耐心等待...')
+      window.location.href = 'https://ydatestapi.libawall.com/excel/importPersonTemplet.xls'
+    }
+    const getFile = file => {
+      fileRef.value = file
     }
     const comfirmAdd = () => {
       emit('update:loading', true)
@@ -199,33 +285,34 @@ export default defineComponent({
           emit('update:loading', false)
           return
         }
-        emit('modalSubmit', state.fileList[0])
+        emit('modalSubmit', fileRef.value)
       } else {
+        check.searchLbwList.forEach(item => {
+          check.checkedMap[item.value] = item
+        })
         const userList = check.checkedList.map(item => {
-          const it = state.lbwList[item]
+          const it = check.checkedMap[item]
           it.libawallId = it.userId
-          delete it.label
-          delete it.value
           delete it.userId
           return it
         })
+        if (!check.checkedList.length) {
+          cmsNotice('error', '请选择导入人员')
+          emit('update:loading', false)
+          return
+        }
         emit('modalSubmit', userList)
+        setTimeout(() => {
+          getLbwData()
+        }, 200)
       }
     }
 
-    const check = reactive({
-      indeterminate: false,
-      checkedList: [],
-      checkAll: false
-    })
-    const onCheckAllChange = e => {
-      check.indeterminate = e.target.checked
-      check.checkedList = e.target.checked ? state.lbwList.map((item, index) => index) : []
-      check.checkAll = e.target.checked
+    const handleCancel = () => {
+      ;(props.types === 'add' || props.types === 'edit' || props.types === 'pass') && formRef.value.resetFields()
+      emit('update:visible', false)
     }
-    const onChange = checkedList => {
-      check.checkAll = checkedList.length === state.lbwList.length
-    }
+
     watch(
       () => props.reRender,
       newVisble => {
@@ -250,6 +337,8 @@ export default defineComponent({
             state.fileList = []
           },
           'lbw-import'() {
+            state.lbwVal = undefined
+            check.searchLbwList = state.lbwList.map(item => item)
             check.indeterminate = false
             check.checkedList = []
             check.checkAll = false
@@ -273,7 +362,10 @@ export default defineComponent({
       check,
       uploadRef,
       state,
-      searchLwbList
+      searchLbwList,
+      downLoadExample,
+      handleCancel,
+      getFile
     }
   }
 })
@@ -334,6 +426,12 @@ export default defineComponent({
   border: 1px solid #e6e6e6;
   border-radius: 4px;
 }
+.search-btn {
+  height: 36px;
+  margin-left: 10px;
+  border-radius: 4px;
+  transform: translateY(2px);
+}
 ::v-deep .ant-checkbox-wrapper {
   display: block;
 }
@@ -380,7 +478,7 @@ export default defineComponent({
   font-weight: 400;
   text-align: justify;
   color: #999999;
-  line-height: 17px;
+  line-height: 30px;
 }
 ::v-deep .ant-modal-title {
   font-size: 18px;

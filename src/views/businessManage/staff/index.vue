@@ -1,7 +1,7 @@
 <template>
   <a-card style="margin: 40px">
     <tableHeader>
-      <a-input class="sec-input" :maxlength="20" v-model:value="searchVal" placeholder="请输入名字或账号">
+      <a-input class="sec-input" allowClear :maxlength="20" v-model:value="searchVal" placeholder="请输入名字或账号">
         <template #prefix>
           <img src="@/assets/svg/search.svg" />
         </template>
@@ -12,15 +12,25 @@
       <a-button class="add-btn" @click="openModal('add')" v-btn="'add'">添加员工</a-button>
     </tableHeader>
     <div style="height: 40px"></div>
-    <a-table :columns="staffColumns" :dataSource="dataSource" :pagination="pagination" @change="handleTableChange">
+    <a-table
+      :columns="staffColumns"
+      :dataSource="dataSource"
+      :pagination="pagination"
+      @change="handleTableChange"
+      :loading="tableLoading"
+    >
+      <template #id1="{index}">{{ pagination.index * 10 + index - 9 }}</template>
       <template #action="{record}">
-        <a @click="openModal('edit', record)" style="display: inline-block; margin-right: 20px" v-btn="'update'"
-          >修改</a
-        >
-        <a @click="openModal('delete', record)" style="display: inline-block; margin-right: 20px" v-btn="'delete'"
-          >删除</a
-        >
-        <a @click="openModal('pass', record)">重置密码</a>
+        <span v-if="record.identity === 2">
+          <a @click="openModal('edit', record)" style="display: inline-block; margin-right: 20px" v-btn="'update'"
+            >修改</a
+          >
+          <a @click="openModal('delete', record)" style="display: inline-block; margin-right: 20px" v-btn="'delete'"
+            >删除</a
+          >
+          <a @click="openModal('pass', record)" v-btn="'repassword'">重置密码</a>
+        </span>
+        <img v-else class="admin-sign" src="@/assets/images/admin-sign.png" />
       </template>
     </a-table>
     <modal
@@ -71,9 +81,11 @@ export default defineComponent({
       staffColumns,
       dataSource: [],
       pagination: {
-        current: 1,
         pageSize: 10,
-        total: 0
+        total: 0,
+        current: 1,
+        'show-total': total => `总共${total}条数据`,
+        index: 0
       },
       visible: false,
       current: undefined,
@@ -83,18 +95,25 @@ export default defineComponent({
       organizationalList: [],
       roleList: [],
       lbwList: [],
-      lbwSearch: undefined
+      lbwSearch: undefined,
+      tableLoading: true
     })
 
     const getList = async () => {
+      state.tableLoading = true
       const params = {
         search: state.searchVal,
         pageIndex: state.pagination.current,
         pageSize: state.pagination.pageSize
       }
       const res = await getUserList(params)
-      state.dataSource = res.data
+      state.dataSource = res.data.map(item => {
+        item.id = item.id + ''
+        return item
+      })
       state.pagination.total = res.totalItem
+      state.pagination.index = res.pageIndex
+      state.tableLoading = false
     }
     const getOrganizationalList = async () => {
       function replacePermissionFeild(arr) {
@@ -139,7 +158,7 @@ export default defineComponent({
           state.loading = true
           Modal.confirm({
             title: '提示',
-            content: '确定删除该部门吗？',
+            content: '确定删除该员工吗？',
             centered: true,
             confirmLoading: state.loading,
             onOk: async () => {
@@ -149,9 +168,9 @@ export default defineComponent({
                 state.pagination.total % (state.pagination.current * 10 - 10) === 1 && (state.pagination.current -= 1)
                 getList()
               }
-              state.loading = false
             }
           })
+          state.loading = false
         },
         edit: async function() {
           state.visible = true
@@ -164,9 +183,15 @@ export default defineComponent({
             }
             return ids
           }
-          const item = findSelectItem(res.data.list, [])
-          state.current.role = res.data.roleId
-          state.current.department = item
+          const department = findSelectItem(res.data.list, [])
+          let filterRoleId = undefined
+          if (Object.keys(res.data.roleId).length) {
+            const filterList = Object.keys(res.data.roleId).filter(key => !res.data.roleId[key])
+            filterList.length && (filterRoleId = ~~filterList[0])
+          }
+          const role = filterRoleId
+          state.current.role = role
+          state.current.department = department
           state.reRender = {}
         }
       }
@@ -176,7 +201,7 @@ export default defineComponent({
       const actionObjFn = {
         add: async function() {
           const params = {
-            roleId: value.role,
+            roleId: [value.role],
             name: value.staffName,
             mobile: value.account,
             deptId: value.department[value.department.length - 1]
@@ -192,7 +217,7 @@ export default defineComponent({
         edit: async function() {
           const params = {
             id: state.current.id,
-            roleId: value.role,
+            roleId: [value.role],
             name: value.staffName,
             mobile: value.account,
             deptId: value.department[value.department.length - 1]
@@ -206,21 +231,23 @@ export default defineComponent({
           state.visible = false
         },
         pass: async function() {
-          const res = await reUserPass({ newPassword: value.pass })
+          const res = await reUserPass({ newPassword: value.pass, userId: state.current.id })
           if (res.success) cmsNotice('success', '修改员工密码成功')
           state.loading = false
           state.visible = false
         },
         import: async function() {
-          const res = await importUser(value)
-          if (res.success) cmsNotice('success', '上传成功')
-          getList()
+          const res = await importUser({ file: value })
+          if (res.success) {
+            cmsNotice('success', '上传成功')
+            getList()
+          }
           state.loading = false
           state.visible = false
         },
         'lbw-import': async function() {
           const res = await importLbwUser(JSON.stringify(value))
-          if (res.data.success) cmsNotice('success', '上传成功')
+          if (res.success) cmsNotice('success', '导入成功')
           getList()
           state.loading = false
           state.visible = false
@@ -246,4 +273,8 @@ export default defineComponent({
 })
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+// .admin-sign {
+//   w
+// }
+</style>

@@ -4,7 +4,7 @@
       <h3 class="title">印章管理系统</h3>
       <section class="action-module">
         <section class="avtar">
-          <img :src="avatar || require('@/assets/images/login-figure.png')" alt="" />
+          <img :src="avatar || require('@/assets/images/default-avatar.png')" alt="" />
           {{ userName || 'aslsk' }}
         </section>
         |
@@ -19,25 +19,30 @@
         </section>
       </section>
     </div>
-    <div class="bread-crumb">
-      <bread-crumb />
-    </div>
+    <company-modal
+      v-model:visible="state.enterpriseVisible"
+      :allEnterprise="allEnterprise"
+      @select-enterprise="selectEnterprise"
+    />
   </section>
 </template>
 
 <script>
 import { Modal } from 'ant-design-vue'
-import { computed, defineComponent } from 'vue'
+import { computed, defineComponent, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { logout } from '@/apis/user'
 import { SET_USER_INFO } from '@/store/user/mutations-type'
-import BreadCrumb from '@/components/BreadCrumb'
+import { SET_ROUTER } from '@/store/router/mutations-type'
+import { SET_APPLY_PROCESS_LIST } from '@/store/globalData/mutations-type'
 import { cmsNotice } from '@/utils/utils'
+import companyModal from '@/views/User/components/companyModal'
+import { tuple } from 'ant-design-vue/lib/_util/type'
 
 export default defineComponent({
   components: {
-    BreadCrumb
+    companyModal
   },
   setup() {
     const router = useRouter()
@@ -47,18 +52,24 @@ export default defineComponent({
     const userName = computed(() => store.state.user.userInfo.userName)
     const avatar = computed(() => store.state.user.userInfo?.avatar)
     const enterpriseName = computed(() => store.state.user.userInfo.enterpriseName)
+    const allEnterprise = computed(() => store.state.user.userInfo.allEnterprise)
+    const state = reactive({
+      enterpriseVisible: false,
+      userInfo: {}
+    })
     const actionBtn = type => {
       const actionObj = {
         self: '/personalCenter',
         switch() {
-          const { pathname, search } = location
-          router.push({
-            path: '/login',
-            query: {
-              redirect: pathname + search,
-              switch: true
-            }
-          })
+          // const { pathname, search } = location
+          state.enterpriseVisible = true
+          // router.push({
+          //   path: '/login',
+          //   query: {
+          //     redirect: pathname + search,
+          //     switch: true
+          //   }
+          // })
         },
         logout() {
           Modal.confirm({
@@ -83,11 +94,55 @@ export default defineComponent({
       }
       typeof actionObj[type] === 'string' ? router.push(actionObj[type]) : actionObj[type]()
     }
+    const cacheUserInfo = async () => {
+      localStorage.setItem('yda-admin-userInfo', JSON.stringify(state.userInfo))
+      store.commit(`user/${SET_USER_INFO}`, state.userInfo)
+      await new Promise(resolve => {
+        store.dispatch(`router/${SET_ROUTER}`, resolve)
+      })
+      store.dispatch(`globalData/${SET_APPLY_PROCESS_LIST}`)
+    }
+    const validateRedirectPath = () => {
+      const routerObj = router.getRoutes()
+      const currentRoute = router.currentRoute.value
+      let isHasHome = false
+      let isHasCurrent = false
+      routerObj.forEach(item => {
+        if (item.path === '/dashboard/analysis') {
+          isHasHome = true
+        }
+        if (item.path === currentRoute.path) {
+          isHasCurrent = true
+        }
+      })
+      isHasCurrent
+        ? (router.push('/a'),
+          setTimeout(() => {
+            router.replace(currentRoute.fullPath)
+          }, 100))
+        : router.push(isHasHome ? '/dashboard/analysis' : '/seal/apply')
+    }
+    const selectEnterprise = async enterpriseInfo => {
+      const userInfo = JSON.parse(localStorage.getItem('yda-admin-userInfo'))
+      userInfo && (state.userInfo = userInfo)
+      state.userInfo = {
+        ...state.userInfo,
+        ...enterpriseInfo
+      }
+      await cacheUserInfo()
+      validateRedirectPath()
+      // return
+      state.enterpriseVisible = false
+      cmsNotice('success', '切换成功', 0.5)
+    }
     return {
       actionBtn,
       userName,
       enterpriseName,
-      avatar
+      avatar,
+      state,
+      allEnterprise,
+      selectEnterprise
     }
   }
 })
@@ -100,9 +155,7 @@ export default defineComponent({
   left: 240px;
   width: calc(100% - 240px);
   background: #f2f3f7;
-}
-.bread-crumb {
-  padding-left: 24px;
+  min-width: 750px;
 }
 .header-box {
   height: 80px;
@@ -135,6 +188,7 @@ export default defineComponent({
       > img {
         width: 44px;
         height: 44px;
+        object-fit: cover;
         margin-right: 10px;
         border-radius: 50%;
       }

@@ -1,6 +1,12 @@
 <template>
   <tableHeader class="table-header">
-    <a-input class="sec-input" v-model:value="searchVal" :maxlength="20" placeholder="请输入印章名称或盖印人">
+    <a-input
+      class="sec-input"
+      allowClear
+      v-model:value="searchVal"
+      :maxlength="20"
+      placeholder="请输入印章名称或盖印人"
+    >
       <template #prefix>
         <img src="@/assets/svg/search.svg" />
       </template>
@@ -8,6 +14,7 @@
     <span class="input-label">用印状态：</span>
     <a-select
       v-model:value="sealStatus"
+      allowClear
       style="width: 240px;height: 36px;
         background: #ffffff;
         border-radius: 4px;"
@@ -19,11 +26,18 @@
     <a-button class="export-btn basic-btn" @click="exportTable">导出</a-button>
   </tableHeader>
   <div style="height: 40px"></div>
-  <a-table :columns="fingerPrintColumns" :dataSource="dataSource" :pagination="pagination" @change="handleTableChange">
+  <a-table
+    :columns="fingerPrintColumns"
+    :dataSource="dataSource"
+    :pagination="pagination"
+    @change="handleTableChange"
+    :loading="tableLoading"
+  >
+    <template #id="{index}">{{ pagination.index * 10 + index - 9 }}</template>
     <template #count>1</template>
     <template #examineStatus="{text}">
-      <span :style="{ background: examineStatusObj[text]?.color }" class="dottos"></span
-      ><span>{{ examineStatusObj[text]?.name }}</span>
+      <span v-if="text" :style="{ background: examineStatusObj[text]?.color }" class="dottos"></span
+      ><span>{{ text ? examineStatusObj[text]?.name : '--' }}</span>
     </template>
     <template #sealStatus="{text}">
       <span :style="{ background: sealStatusObj[text]?.color }" class="dottos"></span
@@ -48,25 +62,29 @@ import { getFingerList, exportFingerList } from '@/apis/seal'
 import { cmsNotice } from '@/utils/utils'
 const typeList = [
   {
-    id: 1,
+    id: 3,
     name: '待归档'
   },
   {
-    id: 2,
+    id: 5,
     name: '已归档'
+  },
+  {
+    id: 4,
+    name: '归档中'
   }
 ]
 const examineStatusObj = {
   0: {
-    name: '用印审批中',
+    name: '审批中',
     color: '#5F99FF'
   },
   1: {
-    name: '用印同意',
+    name: '同意',
     color: '#43CF75'
   },
   2: {
-    name: '用印拒绝',
+    name: '拒绝',
     color: '#C3161C'
   },
   3: {
@@ -118,6 +136,10 @@ export default defineComponent({
     reload: {
       type: Boolean,
       default: false
+    },
+    status: {
+      type: Number,
+      default: undefined
     }
   },
   components: {
@@ -126,33 +148,39 @@ export default defineComponent({
   setup(props) {
     const state = reactive({
       searchVal: undefined,
-      sealStatus: undefined,
+      sealStatus: props.status,
       pagination: {
         current: 1,
         pageSize: 10,
-        total: 0
+        total: 0,
+        'show-total': total => `总共${total}条数据`,
+        index: 0
       },
       dataSource: [],
-      fingerPrintColumns
+      fingerPrintColumns,
+      tableLoading: true
     })
 
     const getList = async () => {
+      state.tableLoading = true
       const params = {
         sealStatus: state.sealStatus,
-        searchName: state.searchVal,
+        search: state.searchVal,
         pageIndex: state.pagination.current,
         pageSize: state.pagination.pageSize
       }
       const res = await getFingerList(params)
       state.dataSource = res.data
       state.pagination.total = res.totalItem
+      state.pagination.index = res.pageIndex
+      state.tableLoading = false
     }
     const handleTableChange = ({ current }) => {
       state.pagination.current = current
       getList()
     }
     const exportTable = () => {
-      window.location = exportFingerList()
+      window.location = exportFingerList({})
       setTimeout(() => {
         cmsNotice('success', '正在为您导出，请耐心等待...')
       }, 200)

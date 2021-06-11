@@ -16,7 +16,7 @@
           :wrapperCol="{ span: 14, offset: 1 }"
           name="process"
         >
-          <a-select v-model:value="modelRef.process" @change="handleProcessSelect">
+          <a-select v-model:value="modelRef.process" @change="handleProcessSelect" placeholder="请选择审批流程">
             <a-select-option v-for="item in processList" :key="item.flowId" :value="item.flowId">{{
               item.flowName
             }}</a-select-option>
@@ -30,37 +30,53 @@
         >
           <div style="height: 17px"></div>
           <a-timeline>
-            <a-timeline-item v-for="(item, index) in processStaffList" :key="item.userId" color="red">
-              <template #dot>
-                <div class="time-progess">{{ index + 1 }}</div>
+            <virtual-list :list="processStaffList" noHeight :size="103" :remain="8" :isScrollTop="isVirtualListScroll2">
+              <template #default="{item}">
+                <approval-list-item :item="item" />
               </template>
-              <section class="time-sec">
-                <p class="time-name">{{ item.name }}</p>
-              </section>
-            </a-timeline-item>
-            <a-timeline-item color="red" v-for="(item, index) in staffList" :key="item.id">
-              <template #dot>
-                <div class="time-progess">{{ index + 1 }}</div>
+            </virtual-list>
+            <virtual-list
+              :list="modelRef.staffList"
+              noHeight
+              :size="103"
+              :remain="8"
+              :isScrollTop="isVirtualListScroll2"
+            >
+              <template #default="{item}">
+                <approval-list-item
+                  :item="item"
+                  :isRemove="true"
+                  :deleteApprovalFn="index => deleteApprovalFn(index, modelRef.staffList)"
+                />
               </template>
-              <section class="time-sec">
-                <p class="time-name">{{ item.name || item.userName }}</p>
-              </section>
-            </a-timeline-item>
+            </virtual-list>
             <a-timeline-item color="red" key="ss" v-if="!processStaffList.length">
               <template #dot>
-                <div class="time-progess">{{ staffList.length + 1 }}</div>
+                <div class="time-progess">{{ modelRef.staffList.length + 1 }}</div>
               </template>
-              <a-button class="add-btn" @click="approvalVisible = true">
+              <a-button class="add-btn" @click="openApprovalModal">
                 +
               </a-button>
             </a-timeline-item>
           </a-timeline>
         </a-form-item>
         <a-form-item label="上传附件" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14, offset: 1 }">
-          <lineUpload :count="100" @fileChange="handleThumbUploadChange" :fileList="modelRef.fileList" />
+          <lineUpload
+            v-if="visible"
+            :count="100"
+            @fileChange="handleThumbUploadChange"
+            :size="10"
+            :fileList="modelRef.fileList"
+            :fileType="['xls', 'xlsx', 'jpg', 'png', 'tif', 'jpeg', 'bmp', 'pdf', 'word', 'webp', 'docx', 'doc', 'txt']"
+          />
         </a-form-item>
-        <a-form-item :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14, offset: 1 }" label="申请事由">
-          <a-textarea :autosize="{ minRows: 5 }" v-model:value="modelRef.mark" :maxlength="50" />
+        <a-form-item :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14, offset: 1 }" label="归档备注">
+          <a-textarea
+            :autosize="{ minRows: 5 }"
+            v-model:value="modelRef.mark"
+            :maxlength="50"
+            placeholder="请输入归档备注"
+          />
         </a-form-item>
         <a-button @click.prevent="$emit('update:visible', false)" class="cancel btn">取消</a-button>
         <a-button @click="modalSubmit" class="primary btn" :loading="loading" type="primary">确定</a-button>
@@ -74,26 +90,46 @@
       :visible="approvalVisible"
       :getContainer="() => $refs.parent"
     >
-      <div
-        style="margin-top: 30px; padding-left: 20px; padding-bottom: 20px; max-height: 400px; overflow-y: scroll;"
-        v-show="searchLbwList.length"
-      >
+      <section style="margin-bottom: 10px" v-if="check.totalSearchList.length - modelRef.staffList.length">
+        <a-input class="search-input" style="width: 250px" v-model:value="check.searchLbwVal">
+          <template #prefix> <img src="@/assets/svg/search.svg" /> </template>
+        </a-input>
+        <a-button type="primary" class="btn search-btn" @click="searchApprovalList">查找</a-button>
+      </section>
+      <div style="padding-left: 20px; padding-bottom: 20px; overflow-y: scroll;" v-show="check.searchLbwList.length">
         <a-checkbox :indeterminate="check.indeterminate" :checked="check.checkAll" @change="onCheckAllChange">
           全选
         </a-checkbox>
-        <a-checkbox-group v-model:value="check.checkedList" :options="searchLbwList" @change="onChange" />
+        <a-checkbox-group :value="check.checkedList">
+          <virtual-list :list="check.searchLbwList" :size="52" :remain="10" :isScrollTop="isVirtualListScroll">
+            <template #default="{item}">
+              <approval-staff-item :item="item" :onChange="onChange" />
+            </template>
+          </virtual-list>
+        </a-checkbox-group>
+      </div>
+      <div style="line-height: 200px; text-align: center;" v-show="!check.searchLbwList.length">
+        暂无审批人
       </div>
     </a-modal>
   </div>
 </template>
 
 <script>
-import { defineComponent, reactive, ref, toRefs, toRaw, onMounted, watch } from 'vue'
+import { defineComponent, reactive, ref, toRefs, onMounted, watch } from 'vue'
 import lineUpload from '@/components/Upload/lineUpload'
 import { getFingerProcessStaff, getProcessStaffList } from '@/apis/businessManage'
+import VirtualList from '@/components/VirtualList'
+import ApprovalStaffItem from '@/components/VirtualList/approvalStaffItem'
+import ApprovalListItem from '@/components/VirtualList/approvalListItem'
+import { useCheckStateAndEvent } from '@/utils/hooks'
+
 export default defineComponent({
   components: {
-    lineUpload
+    lineUpload,
+    VirtualList,
+    ApprovalStaffItem,
+    ApprovalListItem
   },
   props: {
     visible: {
@@ -119,16 +155,17 @@ export default defineComponent({
     const state = reactive({
       isSelect: false,
       processStaffList: [],
-      staffList: [],
       approvalVisible: false,
-      searchLbwList: []
+      isVirtualListScroll: 0,
+      isVirtualListScroll2: 0
     })
     const modelRef = reactive({
       mark: undefined,
       process: undefined,
-      fileList: []
+      fileList: [],
+      staffList: [] // 自由流程选择的审批人
     })
-    const rules = {
+    const rules = reactive({
       process: [
         {
           type: 'number',
@@ -136,21 +173,66 @@ export default defineComponent({
           message: '请选择审批流程'
         }
       ]
+    })
+    const enhancerMapFn = {
+      selectApprovalFn() {
+        state.approvalVisible = false
+        setTimeout(() => {
+          formRef.value.clearValidate('staffList')
+          state.isVirtualListScroll2 += '1'
+        })
+      },
+      deleteApprovalFn() {
+        state.isVirtualListScroll2 = {}
+      },
+      searchApprovalList() {
+        typeof state.isVirtualListScroll === 'number' ? state.isVirtualListScroll++ : (state.isVirtualListScroll = 0)
+      },
+      openApprovalModal() {
+        state.approvalVisible = true
+        setTimeout(() => {
+          typeof state.isVirtualListScroll === 'number' ? state.isVirtualListScroll++ : (state.isVirtualListScroll = 0)
+        })
+      },
+      changeStaffList() {
+        modelRef.staffList = check.staffList.map(item => item)
+      }
     }
+    const {
+      check,
+      onChange,
+      onCheckAllChange,
+      reloadSearchLbwList,
+      selectApprovalFn,
+      searchApprovalList,
+      deleteApprovalFn,
+      openApprovalModal
+    } = useCheckStateAndEvent(enhancerMapFn)
     const getProcessStaff = async () => {
+      // 获取审批人列表
       const res = await getProcessStaffList()
-      state.searchLbwList = res.data.map(item => ({ ...item, label: item.name, value: item.id }))
+      check.searchLbwList = res.data.map(item => ({ ...item, label: item.name, value: item.id }))
+      check.totalSearchList = res.data.map(item => ({ ...item, label: item.name, value: item.id }))
     }
     const handleProcessSelect = async () => {
+      // 流程选择回调
       const res = await getFingerProcessStaff({ id: modelRef.process })
+      formRef.value.clearValidate('staffList')
       state.isSelect = true
-      state.staffList = []
-      state.processStaffList = res.data
+      modelRef.staffList = []
+      state.processStaffList = res.data.map((item, index) => {
+        item.index = index
+        return item
+      })
+      if (state.processStaffList) {
+        typeof state.isVirtualListScroll2 === 'number' ? state.isVirtualListScroll2++ : (state.isVirtualListScroll2 = 0)
+      }
       check.indeterminate = false
       check.checkedList = []
       check.checkAll = false
     }
     const modalSubmit = () => {
+      // 确定的回调
       emit('update:loading', true)
       formRef.value
         .validate()
@@ -161,37 +243,15 @@ export default defineComponent({
             documentArchivedFileDTO: modelRef.fileList,
             id: props.current.documentId
           }
-          if (state.staffList.length) {
-            params.documentViceUserAddDTOS = state.staffList.map(item => ({ userId: item.id }))
+          if (modelRef.staffList.length) {
+            params.documentViceUserAddDTOS = modelRef.staffList.map(item => ({ userId: item.id }))
           }
           emit('modalSubmit', params)
         })
         .catch(() => emit('update:loading', false))
     }
-
-    const check = reactive({
-      indeterminate: false,
-      checkedList: [],
-      checkAll: false
-    })
-    const onCheckAllChange = e => {
-      check.indeterminate = e.target.checked
-      check.checkedList = e.target.checked ? toRaw(state.searchLbwList).map(item => item.value) : []
-      check.checkAll = e.target.checked
-    }
-    const onChange = checkedList => {
-      check.checkAll = checkedList.length === state.searchLbwList.length
-    }
-    const selectApprovalFn = () => {
-      state.approvalVisible = false
-      state.staffList = toRaw(check.checkedList).map(item => state.searchLbwList.find(it => it.id === item))
-    }
     const handleThumbUploadChange = (type, res) => {
-      if (type === 'add') {
-        modelRef.fileList = res.map(item => ({ fileId: item.response.data[0].fileImageDTO.id }))
-      } else {
-        modelRef.fileList = res.map(item => ({ fileId: item.response.data[0].fileImageDTO.id }))
-      }
+      modelRef.fileList = res.map(item => ({ fileId: item.response.data[0].id }))
     }
 
     onMounted(() => {
@@ -205,10 +265,16 @@ export default defineComponent({
           check.indeterminate = false
           check.checkedList = []
           check.checkAll = false
-          state.staffList = []
+          modelRef.staffList = []
           modelRef.fileList = []
           modelRef.process = undefined
+          modelRef.mark = undefined
           state.isSelect = false
+          reloadSearchLbwList()
+          check.searchLbwVal = undefined
+          typeof state.isVirtualListScroll2 === 'number'
+            ? state.isVirtualListScroll2++
+            : (state.isVirtualListScroll2 = 0)
         }
       }
     )
@@ -224,13 +290,25 @@ export default defineComponent({
       onCheckAllChange,
       onChange,
       selectApprovalFn,
-      handleThumbUploadChange
+      handleThumbUploadChange,
+      deleteApprovalFn,
+      searchApprovalList,
+      openApprovalModal
     }
   }
 })
 </script>
 
 <style lang="scss" scoped>
+.remove-arrow {
+  display: block;
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  right: 288px;
+  top: 12px;
+  cursor: pointer;
+}
 .time-progess {
   width: 20px;
   height: 20px;
@@ -245,8 +323,9 @@ export default defineComponent({
 }
 .time-sec {
   padding-left: 24px;
-  margin-bottom: 30px;
+  margin-bottom: 10px;
   transform: translateY(-8px);
+  position: relative;
   .time-figure {
     width: 32px;
     height: 32px;
@@ -306,5 +385,22 @@ export default defineComponent({
   color: #333333;
   line-height: 25px;
   text-indent: 24px;
+}
+.approval-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+  transform: translateY(10px);
+  margin-right: 4px;
+}
+.approval-name {
+  font-size: 16px;
+  font-family: PingFangSC, PingFangSC-Regular;
+  font-weight: 400;
+  text-align: left;
+  color: #999999;
+  display: inline-block;
+  line-height: 32px;
 }
 </style>

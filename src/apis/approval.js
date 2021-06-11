@@ -27,7 +27,7 @@ export function getNotApprovalList(params) {
 // 获取未审批用印详情
 export function getNotApprovalDetail(params) {
   return request({
-    url: `${api.notApproval}/notSealExamineDetails`,
+    url: `${api.approval}/SealExamineDetails`,
     method: 'GET',
     params
   })
@@ -36,7 +36,7 @@ export function getNotApprovalDetail(params) {
 // 获取未审批归档详情
 export function getNotArchivedDetail(params) {
   return request({
-    url: `${api.notApproval}/notExamineArchivedDetails`,
+    url: `${api.approval}/notExamineArchivedDetails`,
     method: 'GET',
     params
   })

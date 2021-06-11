@@ -5,6 +5,17 @@ const api = {
   apply: '/document'
 }
 
+function objToString(obj) {
+  let strArr = []
+  for (const key in obj) {
+    if (obj[key] !== undefined && obj[key] !== null) {
+      strArr.push(`${key}=${obj[key]}`)
+    }
+  }
+  const str = strArr.length ? '?' + strArr.join('&') : ''
+  return str
+}
+
 // 获取普通用印记录
 export function getApplyList(params) {
   return request({
@@ -53,13 +64,13 @@ export function getApplyDetail(params) {
 }
 
 // 导出普通用印记录
-export function exportBaseList() {
-  return process.env.VUE_APP_API_BASE_URL + `${api.applyList}/deriveDocumentRecordDeriveVO`
+export function exportBaseList(params) {
+  return process.env.VUE_APP_API_BASE_URL + `${api.applyList}/deriveDocumentRecordDeriveVO${objToString(params)}`
 }
 
 // 导出指纹用印记录
-export function exportFingerList() {
-  return process.env.VUE_APP_API_BASE_URL + `${api.applyList}/deriveFingerprintSealDeriveVO`
+export function exportFingerList(params) {
+  return process.env.VUE_APP_API_BASE_URL + `${api.applyList}/deriveFingerprintSealDeriveVO${objToString(params)}`
 }
 
 // 获取普通用印记录详情
@@ -81,8 +92,8 @@ export function getFingerprintDetail(params) {
 }
 
 // 导出用印申请
-export function exportApply() {
-  return process.env.VUE_APP_API_BASE_URL + `${api.apply}/apply/deriveDocumentApplyDeriveVO`
+export function exportApply(params) {
+  return process.env.VUE_APP_API_BASE_URL + `${api.apply}/apply/deriveDocumentApplyDeriveVO${objToString(params)}`
 }
 
 // 导出用印申请

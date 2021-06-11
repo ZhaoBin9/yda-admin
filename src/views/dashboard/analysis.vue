@@ -1,6 +1,12 @@
 <template>
   <section class="chapter-total">
-    <div class="total-item" v-for="(item, index) of chapterArr" :key="index" :style="`background: ${item.color}`">
+    <div
+      class="total-item"
+      v-for="(item, index) of chapterArr"
+      :key="index"
+      :style="`background: ${item.color}`"
+      @click="$router.push(item.href)"
+    >
       <img :src="require('@/assets/images/home-icon' + (index + 1) + '.png')" class="item-icon" />
       <section class="item-infor">
         <p class="item-name">{{ item.name }}</p>
@@ -22,37 +28,42 @@ export default {
         count: 0,
         color: '#4e4bac',
         index: 'notExamineSum',
-        href: ''
+        href: '/approval/notApproval'
       },
       {
         name: '用印记录总数',
         count: 0,
         color: '#7d80bb',
-        index: 'recordSum'
+        index: 'recordSum',
+        href: '/seal/applyList'
       },
       {
         name: '盖印总数',
         count: 0,
         color: '#e56a74',
-        index: 'imprintSum'
+        index: 'imprintSum',
+        href: '/seal/applyList'
       },
       {
         name: '用印申请总数',
         count: 0,
         color: '#75c0ce',
-        index: 'applySum'
+        index: 'applySum',
+        href: '/seal/apply'
       },
       {
         name: '已归档总数',
         count: 0,
         color: '#ff9d76',
-        index: 'archiveSum'
+        index: 'archiveSum',
+        href: '/seal/applyList/?sealStatus=5'
       },
       {
         name: '指纹盖印总数',
         count: 0,
         color: '#515bd4',
-        index: 'fingerprintSum'
+        index: 'fingerprintSum',
+        href: '/seal/applyList/?activeKey=1'
       }
     ])
     onMounted(async () => {
@@ -81,38 +92,66 @@ export default {
     opacity: 1;
     border-radius: 20px;
     margin-bottom: 40px;
-    // cursor: pointer;
+    cursor: pointer;
     .item-icon {
-      width: 104px;
-      height: 104px;
+      width: 40%;
+      max-width: 104px;
+      // height: 30%;
       float: left;
     }
     .item-infor {
-      margin-left: 136px;
-      .item-name {
-        font-size: 24px;
-        font-family: PingFangSC, PingFangSC-Medium;
-        font-weight: 500;
-        text-align: left;
-        color: #ffffff;
-        line-height: 33px;
-        margin-bottom: 15px;
-      }
-      .item-count {
-        font-size: 40px;
-        font-family: PingFangSC, PingFangSC-Medium;
-        font-weight: 500;
-        text-align: left;
-        color: #ffffff;
-        line-height: 56px;
-      }
+      margin-left: 50%;
     }
-    .item-arrow {
-      width: 32px;
-      height: 14px;
-      float: right;
-      transform: translateY(-30px);
-    }
+  }
+}
+@media screen and (min-width: 1300px) {
+  .item-name {
+    font-size: 24px;
+    font-family: PingFangSC, PingFangSC-Medium;
+    font-weight: 500;
+    text-align: left;
+    color: #ffffff;
+    line-height: 33px;
+    margin-bottom: 15px;
+  }
+  .item-count {
+    font-size: 40px;
+    font-family: PingFangSC, PingFangSC-Medium;
+    font-weight: 500;
+    text-align: left;
+    color: #ffffff;
+    line-height: 56px;
+  }
+  .item-arrow {
+    width: 32px;
+    height: 14px;
+    float: right;
+    transform: translateY(-30px);
+  }
+}
+@media screen and (max-width: 1300px) {
+  .item-name {
+    font-size: 18px;
+    font-family: PingFangSC, PingFangSC-Medium;
+    font-weight: 500;
+    text-align: left;
+    color: #ffffff;
+    line-height: 26px;
+    margin-bottom: 15px;
+  }
+  .item-count {
+    font-size: 30px;
+    font-family: PingFangSC, PingFangSC-Medium;
+    font-weight: 500;
+    text-align: left;
+    color: #ffffff;
+    line-height: 42px;
+  }
+  .item-arrow {
+    width: 26px;
+    height: 11px;
+    float: right;
+    transform: translateY(-25px);
   }
 }
 </style>

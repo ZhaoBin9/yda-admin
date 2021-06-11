@@ -1,14 +1,5 @@
 <template>
-  <a-upload
-    v-model:file-list="state.fileList"
-    :multiple="true"
-    :action="action"
-    withCredentials
-    :headers="{
-      'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundarynl6gT1BKdPWIejNq'
-    }"
-    :before-upload="beforeUpload"
-  >
+  <a-upload v-model:file-list="state.fileList" :action="action" withCredentials :before-upload="beforeUpload">
     <a-button class="btn" v-if="fileList && fileList.length < count">
       <img
         style="margin-right: 4px; vertical-align: middle; transform: translateY(-1px);"
@@ -17,7 +8,7 @@
       上传附件
     </a-button>
   </a-upload>
-  <p v-if="tips" class="tips">（可上传图片、文档等类型文件，单个文件大小不能超过50M）</p>
+  <p v-if="tips" class="tips">（可上传图片、文档等类型文件，单个文件大小不能超过10M）</p>
 </template>
 
 <script>
@@ -45,11 +36,15 @@ export default defineComponent({
     },
     size: {
       type: Number,
-      default: 50
+      default: 10
     },
     tips: {
       type: Boolean,
       default: true
+    },
+    callback: {
+      type: Function,
+      default: () => {}
     }
   },
   setup(props, ctx) {
@@ -59,6 +54,8 @@ export default defineComponent({
     })
     const beforeUpload = file => {
       emit('update:fileList', [file])
+      // console.log(file)
+      props.callback(file)
       return false
     }
 

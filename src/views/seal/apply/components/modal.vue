@@ -3,21 +3,15 @@
     <a-modal
       centered
       :width="786"
-      title="提交申请"
+      title="添加申请"
       :visible="modalVisible"
-      @cancel="$emit('update:modalVisible', false)"
+      @cancel="handleCancel"
       :footer="null"
       :getContainer="() => $refs.parent"
     >
       <a-form ref="formRef" :rules="rulesRef" :model="modelRef">
-        <a-form-item
-          label="文件名称"
-          placeholder="请输入文件名称"
-          :labelCol="{ span: 4, offset: 2 }"
-          :wrapperCol="{ span: 14 }"
-          name="file"
-        >
-          <a-input :maxlength="30" v-model:value="modelRef.file" />
+        <a-form-item label="文件名称" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }" name="fileName">
+          <a-input placeholder="请输入文件名称" :maxlength="30" v-model:value="modelRef.fileName" />
         </a-form-item>
         <a-row>
           <a-col :span="12">
@@ -31,10 +25,10 @@
               :rules="{
                 type: 'number',
                 required: true,
-                message: `请选择印章类型${index === 0 ? '' : index + 1}`
+                message: `请选择印章名称`
               }"
             >
-              <a-select placeholder="请选择印章类型" @focus="focusSelectChange(index)" v-model:value="item.value">
+              <a-select placeholder="请选择申请印章" @focus="focusSelectChange(index)" v-model:value="item.value">
                 <a-select-option
                   v-for="item in filterSealSelectList"
                   :disabled="item.disabled"
@@ -49,18 +43,22 @@
             <a-form-item
               v-for="(item, index) of modelRef.countList"
               :key="item.key"
-              :label="'申请次数' + (index === 0 ? '' : index + 1)"
+              :label="'申请次数'"
               :labelCol="{ span: 8, offset: 2 }"
               :wrapperCol="{ span: 10 }"
               :name="['countList', index, 'value']"
               :rules="[
                 {
                   required: true,
-                  message: `请选择印章次数${index === 0 ? '' : index + 1}`
+                  message: `请输入印章次数`
                 },
                 {
                   pattern: /^[0-9]*$/,
                   message: '请输入数字'
+                },
+                {
+                  validator: validatorSealApplyCount,
+                  trigger: 'change'
                 }
               ]"
               :class="{ removeType: index !== 0 }"
@@ -76,69 +74,86 @@
           <span style="font-weight: 800; font-size: 20px; transform: translateY(-1px);">+</span>
           添加
         </a-button>
-        <a-form-item :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }" label="用章类型" name="types">
-          <a-radio-group v-model:value="modelRef.types">
-            <a-radio :style="radioStyle" :value="1">单次用章</a-radio>
-            <span class="radio-label">每一次用印都会回收</span>
+        <a-form-item :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }" label="用印类型" name="type">
+          <a-radio-group v-model:value="modelRef.type">
+            <a-radio :style="radioStyle" :value="1">单次用印</a-radio>
+            <span class="radio-label">适用于一般用印场景</span>
             <br />
-            <a-radio :style="radioStyle" :value="2">连续用章</a-radio>
+            <a-radio :style="radioStyle" :value="2">连续用印</a-radio>
             <span class="radio-label">适用于短时间盖大量文件的用印场景</span>
           </a-radio-group>
         </a-form-item>
-        <a-form-item label="申请流程" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }" name="process">
-          <a-select placeholder="请选择审批类型" v-model:value="modelRef.process" @change="handleProcessChange">
+        <a-form-item label="审批流程" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }" name="flowId">
+          <a-select placeholder="请选择审批流程" v-model:value="modelRef.flowId" @change="handleProcessChange">
             <a-select-option v-for="item in processTypeList" :key="item.flowId" :value="item.flowId">{{
               item.flowName
             }}</a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item
-          v-if="addApprovalStaff"
           label="审批人"
           :labelCol="{ span: 4, offset: 2 }"
           :wrapperCol="{ span: 14, offset: 1 }"
+          name="staffList"
         >
           <div style="height: 17px"></div>
           <a-timeline>
-            <a-timeline-item v-for="(item, index) in approvalStaffList" :key="item.userId" color="red">
-              <template #dot>
-                <div class="time-progess">{{ index + 1 }}</div>
+            <virtual-list
+              :list="approvalStaffList"
+              noHeight
+              :size="103"
+              :remain="8"
+              :isScrollTop="isVirtualListScroll2"
+            >
+              <template #default="{item}">
+                <approval-list-item :item="item" />
               </template>
-              <section class="time-sec">
-                <p class="time-name">{{ item.name }}</p>
-              </section>
-            </a-timeline-item>
-            <a-timeline-item color="red" v-for="(item, index) in approvalStaff" :key="item.id">
-              <template #dot>
-                <div class="time-progess">{{ index + 1 }}</div>
+            </virtual-list>
+            <virtual-list
+              :list="modelRef.staffList"
+              noHeight
+              :size="103"
+              :remain="8"
+              :isScrollTop="isVirtualListScroll2"
+            >
+              <template #default="{item}">
+                <approval-list-item
+                  :item="item"
+                  :isRemove="true"
+                  :deleteApprovalFn="index => deleteApprovalFn(index, modelRef.staffList)"
+                />
               </template>
-              <section class="time-sec">
-                <p class="time-name">{{ item.name || item.userName }}</p>
-              </section>
-            </a-timeline-item>
+            </virtual-list>
+
             <a-timeline-item color="red" key="ss" v-if="!approvalStaffList.length">
               <template #dot>
-                <div class="time-progess">{{ approvalStaff.length + 1 }}</div>
+                <div class="time-progess">{{ modelRef.staffList.length + 1 }}</div>
               </template>
-              <a-button class="add-btn" @click="approvalVisible = true">
+              <a-button class="add-btn" @click="openApprovalModal">
                 +
               </a-button>
             </a-timeline-item>
           </a-timeline>
         </a-form-item>
         <a-form-item :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }" label="申请事由">
-          <a-textarea :autosize="{ minRows: 5 }" v-model:value="modelRef.mark" :maxlength="50" />
-        </a-form-item>
-        <a-form-item :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }" label="上传附件">
-          <lineupload
-            :fileList="modelRef.fileList"
-            :count="10"
-            :action="action"
-            @fileChange="handleThumbUploadChange"
-            :fileType="['xls', 'xlsx', 'jpg', 'png', 'tif', 'jpeg', 'bmp', 'pdf', 'word']"
+          <a-textarea
+            :autoSize="{ minRows: 5 }"
+            v-model:value="modelRef.applyText"
+            placeholder="请输入申请事由"
+            :maxlength="50"
           />
         </a-form-item>
-        <a-button @click.prevent="$emit('update:modalVisible', false)" class="cancel btn">取消</a-button>
+        <a-form-item :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }" label="上传文件" v-if="modalVisible">
+          <lineupload
+            :fileList="modelRef.documentApplyFile"
+            :count="10"
+            :action="action"
+            :size="10"
+            @fileChange="handleThumbUploadChange"
+            :fileType="['xls', 'xlsx', 'jpg', 'png', 'tif', 'jpeg', 'bmp', 'pdf', 'word', 'webp', 'docx', 'doc', 'txt']"
+          />
+        </a-form-item>
+        <a-button @click.prevent="handleCancel" class="cancel btn">取消</a-button>
         <a-button @click="onSubmit" class="primary btn" type="primary" :loading="loading">确定</a-button>
       </a-form>
     </a-modal>
@@ -150,27 +165,53 @@
       :visible="approvalVisible"
       :getContainer="() => $refs.parent"
     >
-      <div
-        style="margin-top: 30px; padding-left: 20px; padding-bottom: 20px; max-height: 500px; overflow-y: scroll;"
-        v-show="searchLbwList.length"
-      >
+      <section style="margin-bottom: 10px" v-if="check.totalSearchList.length - modelRef.staffList.length">
+        <a-input class="search-input" style="width: 250px" v-model:value="check.searchLbwVal">
+          <template #prefix> <img src="@/assets/svg/search.svg" /> </template>
+        </a-input>
+        <a-button type="primary" class="btn search-btn" @click="check.searchApprovalList">查找</a-button>
+      </section>
+      <div style=" padding-left: 20px; padding-bottom: 20px;  overflow-y: scroll;" v-show="check.searchLbwList.length">
         <a-checkbox :indeterminate="check.indeterminate" :checked="check.checkAll" @change="onCheckAllChange">
           全选
         </a-checkbox>
-        <a-checkbox-group v-model:value="check.checkedList" :options="searchLbwList" @change="onChange" />
+        <a-checkbox-group :value="check.checkedList">
+          <virtual-list
+            :list="check.searchLbwList"
+            :size="52"
+            :remain="10"
+            :visible="approvalVisible"
+            :isScrollTop="isVirtualListScroll"
+          >
+            <template #default="{item}">
+              <approval-staff-item :item="item" :onChange="onChange" />
+            </template>
+          </virtual-list>
+        </a-checkbox-group>
+      </div>
+      <div style="line-height: 200px; text-align: center;" v-show="!check.searchLbwList.length">
+        暂无审批人
       </div>
     </a-modal>
   </div>
 </template>
 
 <script>
-import { defineComponent, reactive, toRefs, ref, onMounted, computed, toRaw } from 'vue'
+import { defineComponent, reactive, toRefs, ref, onMounted, computed, watch } from 'vue'
 import lineupload from '@/components/Upload/lineUpload'
 import { getProcessSealList, getFingerProcessStaff, getProcessStaffList } from '@/apis/businessManage'
+import VirtualList from '@/components/VirtualList'
+import ApprovalStaffItem from '@/components/VirtualList/approvalStaffItem'
+import ApprovalListItem from '@/components/VirtualList/approvalListItem'
 const action = process.env.VUE_APP_API_BASE_URL + '/file/upload'
+import { useCheckStateAndEvent } from '@/utils/hooks'
+
 export default defineComponent({
   components: {
-    lineupload
+    lineupload,
+    VirtualList,
+    ApprovalStaffItem,
+    ApprovalListItem
   },
   props: {
     modalVisible: {
@@ -190,70 +231,111 @@ export default defineComponent({
     const { emit } = ctx
     const formRef = ref()
     const state = reactive({
-      validate: undefined,
-      validateInfos: undefined,
-      applyTypeList: [],
-      actionUrl: 'sdjkskdj',
+      applyTypeList: [], // 选择过的印章
       uploadThumbCount: 9,
-      applyTypeIndex: 0,
-      approvalStaffList: [],
-      addApprovalStaff: false,
-      searchLbwList: [],
+      applyTypeIndex: 0, // 选择印章的索引
+      approvalStaffList: [], // 固定流程返回的审批人列表
       approvalVisible: false,
-      approvalStaff: [],
-      action: action
+      action: action,
+      isVirtualListScroll: 0,
+      isVirtualListScroll2: 0
     })
     const modelRef = reactive({
-      file: '',
-      applyList: [{ key: 0, value: '' }],
-      countList: [{ key: 0, value: '' }],
-      types: undefined,
-      process: undefined,
-      mark: undefined,
-      fileList: []
+      // form表单的数据
+      fileName: '',
+      applyList: [{ key: 0, value: undefined }],
+      countList: [{ key: 0, value: undefined }],
+      type: 1,
+      flowId: undefined,
+      applyText: undefined,
+      documentApplyFile: [],
+      staffList: []
     })
     const rulesRef = reactive({
-      file: [
+      fileName: [
         {
           required: true,
           message: '请输入文件名'
+        },
+        {
+          pattern: /^[\u4e00-\u9fa5_a-zA-Z0-9]{0,30}$/,
+          message: '名称只能为中英文、数字、下划线组成'
         }
       ],
-      types: [
+      type: [
         {
           type: 'number',
           required: true,
-          message: '请选择用章类型'
+          message: '请选择用印类型'
         }
       ],
-      process: [
+      flowId: [
         {
           type: 'number',
           required: true,
-          message: '请选择流程类型'
+          message: '请选择审批流程'
         }
       ]
     })
+    const enhancerMapFn = {
+      selectApprovalFn() {
+        state.approvalVisible = false
+        setTimeout(() => {
+          formRef.value.clearValidate('staffList')
+          state.isVirtualListScroll2 += '1'
+        })
+      },
+      deleteApprovalFn() {
+        state.isVirtualListScroll2 = {}
+      },
+      searchApprovalList() {
+        typeof state.isVirtualListScroll === 'number' ? state.isVirtualListScroll++ : (state.isVirtualListScroll = 0)
+      },
+      openApprovalModal() {
+        state.approvalVisible = true
+        setTimeout(() => {
+          typeof state.isVirtualListScroll === 'number' ? state.isVirtualListScroll++ : (state.isVirtualListScroll = 0)
+        })
+      },
+      changeStaffList() {
+        modelRef.staffList = check.staffList.map(item => item)
+      }
+    }
+    const {
+      check,
+      onChange,
+      onCheckAllChange,
+      reloadSearchLbwList,
+      selectApprovalFn,
+      searchApprovalList,
+      deleteApprovalFn,
+      openApprovalModal
+    } = useCheckStateAndEvent(enhancerMapFn)
+
+    const validatorSealApplyCount = (rule, value) => {
+      if (value === '0' || value === '00' || value === '000') {
+        return Promise.reject('申请次数最小为1')
+      }
+      return Promise.resolve()
+    }
     const getSealList = async () => {
+      // 获取可使用的印章
       const res = await getProcessSealList()
       state.applyTypeList = res.data
     }
     const getProcessStaff = async () => {
+      // 获取自由流程的审批人
       const res = await getProcessStaffList()
-      state.searchLbwList = res.data.map(item => ({ ...item, label: item.name, value: item.id }))
+      check.searchLbwList = res.data.map((item, index) => ({ ...item, label: item.name, value: item.id, index }))
+      check.totalSearchList = res.data.map((item, index) => ({ ...item, label: item.name, value: item.id, index }))
     }
-
     const onSubmit = () => {
       emit('update:loading', true)
       formRef.value
         .validate()
         .then(() => {
           const params = {
-            fileName: modelRef.file,
-            type: modelRef.types,
-            flowId: modelRef.process,
-            applyText: modelRef.mark,
-            documentApplyFile: modelRef.fileList,
+            ...modelRef,
             sealShowDTO: []
           }
           modelRef.applyList.forEach((item, index) => {
@@ -263,41 +345,59 @@ export default defineComponent({
             }
             params.sealShowDTO.push(it)
           })
-          if (state.approvalStaff.length) {
-            params.documentViceUserAddDTOS = state.approvalStaff.map(item => ({ userId: item.id }))
+          if (modelRef.staffList.length) {
+            params.documentViceUserAddDTOS = modelRef.staffList.map(item => ({ userId: item.id }))
           }
+          delete params.staffList
+          delete params.countList
+          delete params.applyList
           !params.documentApplyFile.length && delete params.documentApplyFile
           emit('modalSubmit', params)
         })
         .catch(() => emit('update:loading', false))
     }
     const addSealType = () => {
-      modelRef.applyList.push({ key: modelRef.applyList.length, value: '' })
-      modelRef.countList.push({ key: modelRef.countList.length, value: '' })
+      // 添加使用印章及次数的函数
+      modelRef.applyList.push({ key: modelRef.applyList.length, value: undefined })
+      modelRef.countList.push({ key: modelRef.countList.length, value: undefined })
     }
     const removeSealType = index => {
+      // 删除使用印章及次数的函数
       modelRef.applyList.splice(index, 1)
       modelRef.countList.splice(index, 1)
     }
 
     const handleThumbUploadChange = (type, res) => {
-      if (type === 'add') {
-        modelRef.fileList = res.map(item => ({ fileId: item.response.data[0].fileImageDTO.id }))
-      } else {
-        modelRef.fileList = res.map(item => ({ fileId: item.response.data[0].fileImageDTO.id }))
-      }
+      // 上传附件成功后的赋值
+      modelRef.documentApplyFile = res.map(item => ({ fileId: item.response.data[0].id }))
     }
     const handleProcessChange = async val => {
+      // 流程选择函数
       const res = await getFingerProcessStaff({ id: val })
-      !state.addApprovalStaff ? (state.addApprovalStaff = true) : false
-      state.approvalStaffList = res.data
-      state.approvalStaff = []
+      formRef.value.clearValidate('staffList')
+      state.approvalStaffList = res.data.map((item, index) => {
+        item.index = index
+        return item
+      })
+      modelRef.staffList = []
       check.indeterminate = false
       check.checkedList = []
       check.checkAll = false
+      if (res.data.length === 0) {
+        rulesRef.staffList = [{ type: 'array', required: true, message: '请选择审批人' }]
+      } else {
+        rulesRef.staffList = []
+      }
+      reloadSearchLbwList(modelRef.staffList)
+      typeof state.isVirtualListScroll2 === 'number' ? state.isVirtualListScroll2++ : (state.isVirtualListScroll2 = 0)
+    }
+    const handleCancel = () => {
+      formRef.value.resetFields()
+      emit('update:modalVisible', false)
     }
 
     const filterSealSelectList = computed(() => {
+      // 印章选择后，在其他中其他的要置灰
       const filterList = modelRef.applyList.filter((item, index) => (item ? index !== state.applyTypeIndex : false))
       const newApplyList = state.applyTypeList.map(item => ({ ...item }))
       filterList.forEach(item => {
@@ -316,25 +416,28 @@ export default defineComponent({
     })
 
     const focusSelectChange = index => {
+      // 印章获取焦点
       state.applyTypeIndex = index
     }
-    const check = reactive({
-      indeterminate: false,
-      checkedList: [],
-      checkAll: false
-    })
-    const onCheckAllChange = e => {
-      check.indeterminate = e.target.checked
-      check.checkedList = e.target.checked ? toRaw(state.searchLbwList).map(item => item.value) : []
-      check.checkAll = e.target.checked
-    }
-    const onChange = checkedList => {
-      check.checkAll = checkedList.length === state.searchLbwList.length
-    }
-    const selectApprovalFn = () => {
-      state.approvalVisible = false
-      state.approvalStaff = toRaw(check.checkedList).map(item => state.searchLbwList.find(it => it.id === item))
-    }
+
+    watch(
+      () => props.modalVisible,
+      newVisible => {
+        if (newVisible) {
+          modelRef.flowId = props.processTypeList[props.processTypeList.length - 1].flowId
+          handleProcessChange(props.processTypeList[props.processTypeList.length - 1].flowId)
+          modelRef.fileName = ''
+          modelRef.applyList = [{ key: 0, value: undefined }]
+          modelRef.countList = [{ key: 0, value: undefined }]
+          modelRef.type = 1
+          modelRef.applyText = undefined
+          modelRef.documentApplyFile = []
+          modelRef.staffList = []
+          state.searchLbwVal = undefined
+          reloadSearchLbwList()
+        }
+      }
+    )
 
     onMounted(() => {
       getSealList()
@@ -346,6 +449,7 @@ export default defineComponent({
       modelRef,
       formRef,
       rulesRef,
+      validatorSealApplyCount,
       onSubmit,
       addSealType,
       removeSealType,
@@ -356,7 +460,11 @@ export default defineComponent({
       check,
       onCheckAllChange,
       onChange,
-      selectApprovalFn
+      selectApprovalFn,
+      deleteApprovalFn,
+      handleCancel,
+      searchApprovalList,
+      openApprovalModal
     }
   }
 })
@@ -422,7 +530,7 @@ export default defineComponent({
   margin-left: 14px;
 }
 .time-progess {
-  width: 20px;
+  min-width: 20px;
   height: 20px;
   background: #c3161c;
   border-radius: 50%;
@@ -435,8 +543,9 @@ export default defineComponent({
 }
 .time-sec {
   padding-left: 24px;
-  margin-bottom: 30px;
+  margin-bottom: 10px;
   transform: translateY(-8px);
+  display: flex;
   .time-figure {
     width: 32px;
     height: 32px;
@@ -444,14 +553,35 @@ export default defineComponent({
     margin-bottom: 2px;
     display: block;
   }
+  .remove-arrow {
+    width: 20px;
+    height: 20px;
+    // margin-top: 7px;
+    transform: translateY(23px);
+    cursor: pointer;
+    display: block;
+  }
+  .time-info {
+    .time-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px;
+      object-fit: cover;
+      margin: 0 auto;
+    }
+  }
   .time-name {
     font-size: 16px;
     font-family: PingFangSC, PingFangSC-Regular;
     font-weight: 400;
     text-align: left;
     color: #999999;
-    line-height: 32px;
+    // line-height: 32px;
     transform: translateY(5px);
+    width: 80px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 ::v-deep .ant-timeline-item-tail {
@@ -479,6 +609,10 @@ export default defineComponent({
   margin-left: 20px;
   margin-top: 40px;
   margin-bottom: 20px;
+  line-height: 38px;
+}
+.search-btn {
+  margin-top: 0;
 }
 .cancel {
   border: 1px solid #dadada;
@@ -492,9 +626,5 @@ export default defineComponent({
   color: #333333;
   line-height: 25px;
   text-indent: 24px;
-}
-.ant-checkbox-group {
-  display: flex;
-  flex-direction: column;
 }
 </style>

@@ -1,9 +1,10 @@
 export const fingerColumns = [
   {
     title: '序号',
-    dataIndex: 'orderNumber',
-    key: 'orderNumber',
-    align: 'center'
+    dataIndex: 'id1',
+    key: 'id1',
+    align: 'center',
+    slots: { customRender: 'id1' }
   },
   {
     title: '设备编号',

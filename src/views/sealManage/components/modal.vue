@@ -5,24 +5,24 @@
       :width="786"
       :title="modalTitle"
       :visible="visible"
-      @cancel="$emit('update:visible', false)"
+      @cancel="handleCancel"
       :footer="null"
       :getContainer="() => $refs.parent"
     >
       <section style="padding: 0 80px">
         <a-form ref="formRef" :rules="rules" :model="modalVal">
-          <a-form-item label="印章名称" name="sealVal" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-            <a-input v-model:value="modalVal.sealVal" :maxlength="30" />
+          <a-form-item label="印章名称" name="sealVal"  :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
+            <a-input v-model:value="modalVal.sealVal" :maxlength="30" placeholder="请输入印章名称" />
           </a-form-item>
           <a-form-item label="保管人" name="keepName" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-            <a-select v-model:value="modalVal.keepName">
+            <a-select v-model:value="modalVal.keepName" placeholder="请选择" >
               <a-select-option v-for="item in staffList" :key="item.id" :value="item.id">{{
                 item.name
               }}</a-select-option>
             </a-select>
           </a-form-item>
-          <a-form-item label="印章类型" name="sealStatus" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-            <a-select v-model:value="modalVal.sealStatus">
+          <a-form-item label="印章类型" name="sealStatus"  :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
+            <a-select v-model:value="modalVal.sealStatus" placeholder="请选择" >
               <a-select-option v-for="item in sealType" :key="item.id" :value="item.id">{{
                 item.name
               }}</a-select-option>
@@ -30,7 +30,7 @@
           </a-form-item>
         </a-form>
         <div class="action-box">
-          <a-button class="btn close" @click="$emit('update:visible', false)">取消</a-button>
+          <a-button class="btn close" @click="handleCancel">取消</a-button>
           <a-button class="btn comfirm" @click="comfirmAdd" :loading="loading">确定</a-button>
         </div>
       </section>
@@ -101,7 +101,7 @@ export default defineComponent({
         {
           type: 'number',
           required: true,
-          message: '请输入印章名称'
+          message: '请选择印章类型'
         }
       ]
     }
@@ -111,6 +111,10 @@ export default defineComponent({
         .validate()
         .then(() => emit('modalSubmit', modalVal))
         .catch(() => emit('update:loading', false))
+    }
+     const handleCancel = () => {
+      formRef.value.resetFields()
+      emit('update:visible', false)
     }
 
     watch(
@@ -135,7 +139,8 @@ export default defineComponent({
       modalVal,
       rules,
       modalTitle,
-      sealType
+      sealType,
+      handleCancel
     }
   }
 })

@@ -1,9 +1,10 @@
 export const fingerPrintColumns = [
   {
     title: '序号',
-    dataIndex: 'documentId',
-    key: 'documentId',
-    align: 'center'
+    dataIndex: 'id',
+    key: 'id',
+    align: 'center',
+    slots: { customRender: 'id' }
   },
   {
     title: '印章名称',
@@ -31,12 +32,6 @@ export const fingerPrintColumns = [
     slots: { customRender: 'count' }
   },
   {
-    title: '申请时间',
-    dataIndex: 'time',
-    key: 'time',
-    align: 'center'
-  },
-  {
     title: '用印状态',
     dataIndex: 'sealStatus',
     key: 'sealStatus',
@@ -48,7 +43,7 @@ export const fingerPrintColumns = [
     dataIndex: 'examineStatus',
     key: 'examineStatus',
     align: 'center',
-    lots: { customRender: 'examineStatus' }
+    slots: { customRender: 'examineStatus' }
   },
   {
     title: '操作',
@@ -62,9 +57,10 @@ export const fingerPrintColumns = [
 export const baseColumns = [
   {
     title: '序号',
-    dataIndex: 'documentId',
-    key: 'documentId',
-    align: 'center'
+    dataIndex: 'id',
+    key: 'id',
+    align: 'center',
+    slots: { customRender: 'id' }
   },
   {
     title: '文件名称',
@@ -102,6 +98,13 @@ export const baseColumns = [
     key: 'sealStatus',
     align: 'center',
     slots: { customRender: 'sealStatus' }
+  },
+  {
+    title: '审批状态',
+    dataIndex: 'examineStatus',
+    key: 'examineStatus',
+    align: 'center',
+    slots: { customRender: 'examineStatus' }
   },
   {
     title: '操作',

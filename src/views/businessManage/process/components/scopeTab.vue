@@ -1,7 +1,7 @@
 <template>
   <section class="scope-box">
     <section v-show="activeKey === 'staff'">
-      <a-input class="search-input" style="width: 250px" v-model:value="searchVal">
+      <a-input class="search-input" style="width: 250px" v-model:value="check.searchLbwVal">
         <template #prefix> <img src="@/assets/svg/search.svg" /> </template>
       </a-input>
       <a-button type="primary" class="btn" @click="searchStaffList">查找</a-button>
@@ -9,22 +9,28 @@
     <div style="height: 15px"></div>
     <a-tabs v-model:activeKey="activeKey">
       <a-tab-pane key="staff" tab="员工">
-        <div style="margin-top: 30px; padding-left: 20px; padding-bottom: 20px" v-show="searchList.length">
+        <div style="margin-top: 30px; padding-left: 20px; padding-bottom: 20px" v-show="check.searchLbwList.length">
           <a-checkbox :indeterminate="check.indeterminate" :checked="check.checkAll" @change="onCheckAllChange">
             全选
           </a-checkbox>
-          <a-checkbox-group v-model:value="check.checkedList" :options="searchList" @change="onChange" />
+          <a-checkbox-group :value="check.checkedList">
+            <virtual-list :list="check.searchLbwList" :size="52" :remain="4" :isScrollTop="isVirtualListScroll">
+              <template #default="{item}">
+                <approval-staff-item :item="item" :onChange="onChange" />
+              </template>
+            </virtual-list>
+          </a-checkbox-group>
         </div>
-        <div v-show="searchList.length === 0" style="line-height: 200px; text-indent: 150px">
+        <div v-show="check.searchLbwList.length === 0" style="line-height: 200px; text-indent: 150px">
           暂无数据
         </div>
       </a-tab-pane>
       <a-tab-pane key="department" tab="部门">
-        <a-tree
+        <!-- <a-tree
           v-if="organizationalList.length"
           class="draggable-tree"
           checkable
-          v-model:checkedKeys="department"
+          :checkedKeys="department"
           :tree-data="organizationalList"
           :expanded-keys="expandedKeys"
           :auto-expand-parent="autoExpandParent"
@@ -34,7 +40,16 @@
           <template #switcherIcon>
             <img src="@/assets/svg/depart-tree-arrow.svg" />
           </template>
-        </a-tree>
+        </a-tree> -->
+        <tree-virtual-list
+          v-if="organizationalList.length"
+          @onCheck="onCheck"
+          :size="32"
+          :remain="8"
+          :list="organizationalList"
+          :isShow="2"
+          :department="department"
+        />
         <div v-else style="line-height: 200px; text-indent: 150px">
           暂无数据
         </div>
@@ -44,10 +59,19 @@
 </template>
 
 <script>
-import { defineComponent, onMounted, reactive, toRaw, toRefs, watch } from 'vue'
-import { getDepartmentOrganizational } from '@/apis/businessManage'
+import { defineComponent, reactive, toRaw, toRefs, watch } from 'vue'
+import VirtualList from '@/components/VirtualList'
+import ApprovalStaffItem from '@/components/VirtualList/approvalStaffItem'
+import { useCheckStateAndEvent } from '@/utils/hooks'
+import TreeVirtualList from '@/components/VirtualList/treeVirtualList'
+
 export default defineComponent({
   name: 'scope-tab',
+  components: {
+    VirtualList,
+    ApprovalStaffItem,
+    TreeVirtualList
+  },
   props: {
     searchLbwList: {
       type: Array,
@@ -61,83 +85,89 @@ export default defineComponent({
       type: Boolean,
       default: false
     },
-    type: {
+    types: {
       type: String,
       default: 'add'
+    },
+    organizationalList: {
+      type: Array,
+      default: () => []
     }
   },
   setup(props, ctx) {
     const { emit } = ctx
     const state = reactive({
       activeKey: 'staff',
-      organizationalList: [],
       department: [],
+      departMap: new Map(),
       autoExpandParent: false,
       expandedKeys: [],
-      searchVal: undefined,
-      searchList: []
+      departmentSearchList: [],
+      isVirtualListScroll: 0
     })
-    const getOrganizationalList = async () => {
-      function replacePermissionFeild(arr) {
-        return arr.map(item => {
-          const newItem = { ...item, title: item.departmentName, key: item.id }
-          if (newItem.departmentDTOList && newItem.departmentDTOList.length) {
-            newItem.children = replacePermissionFeild(newItem.departmentDTOList)
-          }
-          delete newItem.departmentDTOList
-          delete newItem.departmentName
-          delete newItem.id
-          return newItem
-        })
-      }
-      const res = await getDepartmentOrganizational()
-      const permissionList = replacePermissionFeild(res.data)
-      state.organizationalList = permissionList.length
-        ? [
-            {
-              children: permissionList,
-              title: '全部部门',
-              key: 'sss'
-            }
-          ]
-        : []
-    }
 
-    const check = reactive({
-      indeterminate: false,
-      checkedList: [],
-      checkAll: false
-    })
-    const onCheckAllChange = e => {
-      check.indeterminate = e.target.checked
-      check.checkedList = e.target.checked ? state.searchList.map(item => item.id) : []
-      check.checkAll = e.target.checked
-      emit('update:departmentVal', { ...props.departmentVal, staff: toRaw(check.checkedList) })
-      emit('update:department', !check.checkedList.length && !state.department.length ? undefined : '已选择')
+    const enhancerMapFn = {
+      onCheckAllChange() {
+        emit('update:departmentVal', { ...props.departmentVal, staff: toRaw(check.checkedList) })
+        emit('update:department', !check.checkedList.length && !state.department.length ? undefined : '已选择')
+      },
+      onChange() {
+        emit('update:departmentVal', { ...props.departmentVal, staff: check.checkedList })
+        emit('update:department', !check.checkedList.length && !state.department.length ? undefined : '已选择')
+      }
     }
-    const onChange = checkedList => {
-      check.checkAll = checkedList.length === state.searchList.length
-      emit('update:departmentVal', { ...props.departmentVal, staff: checkedList })
-      emit('update:department', !check.checkedList.length && !state.department.length ? undefined : '已选择')
-    }
+    const { check, onChange, onCheckAllChange } = useCheckStateAndEvent(enhancerMapFn)
+
     const onExpand = expandedKeys => {
       state.expandedKeys = expandedKeys
       state.autoExpandParent = false
     }
-    const onCheck = checkedKeys => {
-      emit('update:departmentVal', { ...props.departmentVal, department: checkedKeys })
-      emit('update:department', !check.checkedList.length && !state.department.length ? undefined : '已选择')
+    const onCheck = department => {
+      state.department = department
+      emit('update:departmentVal', { ...props.departmentVal, department })
+      emit('update:department', !check.checkedList.length && !department.length ? undefined : '已选择')
     }
     const searchStaffList = () => {
-      state.searchList = props.searchLbwList.filter(item => item.name.includes(state.searchVal))
-      check.indeterminate = false
+      check.searchLbwList = check.searchLbwVal
+        ? props.searchLbwList.filter(item => item.name.includes(check.searchLbwVal))
+        : props.searchLbwList
+      check.checkedMap = {}
+      props.searchLbwList.forEach(item => {
+        check.checkedMap[item.value] = false
+      })
       check.checkedList = []
-      onChange([])
+      check.checkAll = check.indeterminate = false
+      typeof state.isVirtualListScroll === 'number' ? state.isVirtualListScroll++ : (state.isVirtualListScroll = 0)
     }
 
-    onMounted(() => {
-      getOrganizationalList()
-    })
+    watch(
+      () => props.organizationalList.length,
+      () => {
+        state.departMap.clear()
+        function deepIteration(array) {
+          array.forEach(item => {
+            if (item.children && item.children.length) {
+              deepIteration(item.children)
+            }
+            state.departMap.set(item.key, false)
+          })
+        }
+
+        deepIteration(props.organizationalList)
+      },
+      { immediate: true }
+    )
+
+    watch(
+      () => props.searchLbwList.length,
+      () => {
+        check.searchLbwList = props.searchLbwList.map(item => {
+          check.checkedMap[item.id] = false
+          return item
+        })
+      },
+      { immediate: true }
+    )
 
     watch(
       () => props.visible,
@@ -146,27 +176,24 @@ export default defineComponent({
         state.activeKey = 'staff'
         state.expandedKeys = ['sss']
         state.autoExpandParent = false
-        state.searchVal = undefined
-        if (props.type === 'add') {
+        check.searchVal = undefined
+        check.checkedMap = {}
+        if (props.types === 'add') {
           state.department = []
           check.checkAll = false
           check.indeterminate = false
           check.checkedList = []
-        } else if (props.type === 'edit') {
-          state.department = ['sss', ...props.departmentVal.department]
-          check.checkedList = props.departmentVal.staff
-          check.checkAll = props.departmentVal.staff.length === state.searchList.length
+        } else if (props.types === 'edit') {
+          state.department = props.departmentVal.department.length ? [...props.departmentVal.department] : []
+          check.checkedList = props.departmentVal.staff.map(item => {
+            check.checkedMap[item] = true
+            return item
+          })
+          check.checkAll = props.departmentVal.staff.length === check.searchLbwList.length
           check.indeterminate = check.checkAll
           emit('update:department', !check.checkedList.length && !state.department.length ? undefined : '已选择')
         }
-      },
-      { immediate: true }
-    )
-
-    watch(
-      () => props.searchLbwList.length,
-      () => {
-        state.searchList = props.searchLbwList
+        typeof state.isVirtualListScroll === 'number' ? state.isVirtualListScroll++ : (state.isVirtualListScroll = 0)
       },
       { immediate: true }
     )
@@ -189,7 +216,6 @@ export default defineComponent({
   width: 415px;
   height: 400px;
   background: #ffffff;
-  // box-shadow: 0px 2px 8px 0px rgba(0, 0, 0, 0.15);
   border-radius: 4px;
   padding: 20px;
 }

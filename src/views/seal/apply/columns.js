@@ -1,9 +1,10 @@
 export const applyColumns = [
   {
     title: '序号',
-    dataIndex: 'documentId',
-    key: 'documentId',
-    align: 'center'
+    dataIndex: 'id',
+    key: 'id',
+    align: 'center',
+    slots: { customRender: 'id' }
   },
   {
     title: '文件名称',
@@ -36,7 +37,7 @@ export const applyColumns = [
     align: 'center'
   },
   {
-    title: '申请状态',
+    title: '审批状态',
     dataIndex: 'examineStatus',
     key: 'examineStatus',
     align: 'center',

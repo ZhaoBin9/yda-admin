@@ -1,9 +1,10 @@
 export const staffColumns = [
   {
     title: '序号',
-    dataIndex: 'id',
-    key: 'id',
-    align: 'center'
+    dataIndex: 'id1',
+    key: 'id1',
+    align: 'center',
+    slots: { customRender: 'id1' }
   },
   {
     title: '姓名',
@@ -37,7 +38,8 @@ export const departmentColumns = [
     title: '序号',
     dataIndex: 'id',
     key: 'id',
-    align: 'center'
+    align: 'center',
+    slots: { customRender: 'id' }
   },
   {
     title: '部门名称',
@@ -71,33 +73,31 @@ export const departmentColumns = [
 export const processColumns = [
   {
     title: '序号',
-    dataIndex: 'flowId',
-    key: 'flowId',
-    align: 'center'
+    dataIndex: 'id',
+    key: 'id',
+    align: 'center',
+    slots: { customRender: 'id' }
   },
   {
     title: '流程名称',
     dataIndex: 'flowName',
-    key: 'flowName',
-    align: 'center'
+    key: 'flowName'
   },
   {
     title: '创建人',
     dataIndex: 'foundName',
-    key: 'foundName',
-    align: 'center'
+    key: 'foundName'
   },
   {
-    title: '使用范围',
+    title: '适用范围',
     dataIndex: 'flowScope',
     key: 'flowScope',
-    align: 'center'
+    slots: { customRender: 'flowScope' }
   },
   {
     title: '业务类型',
     dataIndex: 'businessType',
     key: 'businessType',
-    align: 'center',
     slots: { customRender: 'businessType' }
   },
   {
@@ -113,7 +113,8 @@ export const roleColumns = [
   {
     title: '序号',
     dataIndex: 'id',
-    key: 'id'
+    key: 'id',
+    slots: { customRender: 'id' }
   },
   {
     title: '角色名称',
@@ -123,9 +124,9 @@ export const roleColumns = [
   },
   {
     title: '角色说明',
-    dataIndex: 'explain',
-    key: 'explain',
-    slots: { customRender: 'explain' }
+    dataIndex: 'roleExplain',
+    key: 'roleExplain',
+    slots: { customRender: 'roleExplain' }
   },
   {
     title: '操作',

@@ -5,39 +5,40 @@
       :width="786"
       :title="modalTitle"
       :visible="visible"
-      @cancel="$emit('update:visible', false)"
+      @cancel="handleCancel"
       :footer="null"
       :getContainer="() => $refs.parent"
     >
       <a-form ref="formRef" v-if="isAdd" :rules="rules" :model="formData">
-        <a-form-item
-          label="部门名称"
-          :maxlength="10"
-          name="department"
-          :labelCol="{ span: 4, offset: 2 }"
-          :wrapperCol="{ span: 14 }"
-        >
-          <a-input v-model:value="formData.department" />
+        <a-form-item label="部门名称" name="department" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
+          <a-input :maxlength="30" placeholder="请输入部门名称" v-model:value="formData.department" />
         </a-form-item>
         <a-form-item label="上级部门" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
           <a-cascader
             changeOnSelect
             v-model:value="formData.nextDepart"
             :options="realPermissionList"
-            placeholder="选择上级部门"
+            placeholder="请选择上级部门"
+            :disabled="state.departDisabled"
+            showSearch
           />
         </a-form-item>
       </a-form>
       <section v-else>
         <a-form-item label="下载模板" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-          <a>点此下载批量导入Excel模版文件</a>
+          <a @click="downLoadExample">点此下载批量导入Excel模版文件</a>
         </a-form-item>
         <a-form-item label="上传模板" :labelCol="{ span: 4, offset: 2 }" :wrapperCol="{ span: 14 }">
-          <delay-upload v-model:fileList="state.fileList" ref="uploadRef" />
+          <delay-upload
+            uploadText="仅支持xls,xlsx格式的文档，单个文件大小不能超过10M"
+            v-model:fileList="state.fileList"
+            :callback="getFile"
+            ref="uploadRef"
+          />
         </a-form-item>
       </section>
       <div class="action-box">
-        <a-button class="btn close" @click="$emit('update:visible', false)">取消</a-button>
+        <a-button class="btn close" @click="handleCancel">取消</a-button>
         <a-button class="btn comfirm" @click="comfirmAdd" :loading="loading">确定</a-button>
       </div>
     </a-modal>
@@ -47,6 +48,7 @@
 <script>
 import { computed, defineComponent, reactive, ref, toRaw, watch } from 'vue'
 import DelayUpload from '@/components/Upload/delayUpload'
+import { cmsNotice } from '@/utils/utils'
 
 export default defineComponent({
   components: {
@@ -79,8 +81,10 @@ export default defineComponent({
     }
   },
   setup(props, ctx) {
+    let currentLevelId = ref()
     const formRef = ref()
     const uploadRef = ref()
+    let fileRef = ref()
     const { emit } = ctx
     const modalTitle = computed(() => {
       const titleObj = {
@@ -94,7 +98,8 @@ export default defineComponent({
       fileList: [],
       count: 1,
       file: null,
-      size: 50
+      size: 50,
+      departDisabled: false
     })
     const realPermissionList = computed(() => {
       let newArray = props.permissionList.slice()
@@ -104,7 +109,11 @@ export default defineComponent({
           if (item.children) {
             num <= 0 ? deleteDeepLevel(item.children, num, true) : deleteDeepLevel(item.children, num)
           }
+
           item.disabled = disabled
+          if (item.value === currentLevelId.value) {
+            item.disabled = true
+          }
           num++
         })
       }
@@ -123,33 +132,63 @@ export default defineComponent({
         }
       ]
     }
-    const seekParentId = (level, id) => {
-      if (level === 1) return []
-      if (level === 2) return [id]
-      let parentId = []
+    const seekParentId = (level, parentId, id) => {
+      if (level === 1) {
+        let isHasChildDepart = false
+        props.permissionList.find(item => {
+          if (item.value === id && item.children) {
+            let sign = false
+            item.children.forEach(it => {
+              if (it.children) {
+                isHasChildDepart = true
+                state.departDisabled = true
+                sign = true
+              }
+            })
+            return sign
+          }
+          return false
+        })
+        return isHasChildDepart ? true : []
+      }
+      if (level === 2) return [parentId]
+      let parentList = []
       props.permissionList.forEach(item => {
         if (item.children) {
           item.children.forEach(it => {
             if (parentId.length === 1) return false
-            if (it.value === id) {
-              return parentId.push(it.parentId)
+            if (it.value === parentId) {
+              return parentList.push(it.parentId)
             }
           })
         }
       })
-      parentId.push(id)
-      return parentId
+      parentList.push(parentId)
+      return parentList
+    }
+
+    const handleCancel = () => {
+      formRef.value?.resetFields && formRef.value.resetFields()
+      emit('update:visible', false)
+    }
+    const downLoadExample = () => {
+      cmsNotice('success', '正在为您下载，请耐心等待...')
+      window.location = 'https://ydatestapi.libawall.com/excel/importDepartmentTemplet.xls'
     }
     watch(
       () => props.visible,
       newVisible => {
         if (!newVisible) return
+        state.departDisabled = false
         if (props.type === 'add') {
           formData.department = undefined
           formData.nextDepart = []
+          currentLevelId.value = undefined
         } else if (props.type === 'edit') {
           formData.department = props.current.departmentName
-          formData.nextDepart = seekParentId(props.current.level, props.current.parentId)
+          currentLevelId.value = props.current.id
+          const depart = seekParentId(props.current.level, props.current.parentId, props.current.id)
+          formData.nextDepart = Array.isArray(depart) ? depart : []
         } else if (props.type === 'export') {
           state.fileList = []
         }
@@ -157,7 +196,6 @@ export default defineComponent({
     )
     const comfirmAdd = () => {
       emit('update:loading', true)
-
       if (props.isAdd) {
         formRef.value
           .validate()
@@ -171,8 +209,11 @@ export default defineComponent({
           emit('update:loading', false)
           return
         }
-        emit('modalSubmit', state.fileList[0])
+        emit('modalSubmit', fileRef.value)
       }
+    }
+    const getFile = file => {
+      fileRef.value = file
     }
 
     return {
@@ -180,10 +221,14 @@ export default defineComponent({
       modalTitle,
       state,
       formRef,
+      fileRef,
       rules,
       comfirmAdd,
       realPermissionList,
-      uploadRef
+      uploadRef,
+      downLoadExample,
+      handleCancel,
+      getFile
     }
   }
 })

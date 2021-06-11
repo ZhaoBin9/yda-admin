@@ -1,7 +1,7 @@
 <template>
   <a-card style="margin: 40px">
     <tableHeader>
-      <a-input class="sec-input" :maxlength="20" v-model:value="searchVal" placeholder="请输入姓名或账号">
+      <a-input class="sec-input" allowClear :maxlength="20" v-model:value="searchVal" placeholder="请输入姓名或账号">
         <template #prefix>
           <img src="@/assets/svg/search.svg" />
         </template>
@@ -9,7 +9,14 @@
       <a-button class="search-btn basic-btn" @click="searchList">查询</a-button>
     </tableHeader>
     <div style="height: 40px"></div>
-    <a-table :columns="fingerColumns" :dataSource="dataSource" :pagination="pagination" @change="handleTableChange">
+    <a-table
+      :columns="fingerColumns"
+      :dataSource="dataSource"
+      :pagination="pagination"
+      @change="handleTableChange"
+      :loading="tableLoading"
+    >
+      <template #id1="{index}">{{ pagination.index * 10 + index - 9 }}</template>
       <template #action><a @click="openModal">查看</a></template>
     </a-table>
   </a-card>
@@ -29,28 +36,20 @@ export default defineComponent({
       searchVal: undefined,
       fingerColumns,
       pagination: {
-        current: 1,
         pageSize: 10,
-        total: 0
+        total: 0,
+        current: 1,
+        'show-total': total => `总共${total}条数据`,
+        index: 0
       },
-      dataSource: [
-        {
-          key: '1',
-          id: 1,
-          file: '项目招标书',
-          name: 'jejdssd',
-          apply: 'sdjkkdsj',
-          count: 12,
-          time: '2021-01-27 15:00:00',
-          status: 'sajksajkksja',
-          sta: 'sdmksd'
-        }
-      ],
+      dataSource: [],
       visible: false,
-      currentData: undefined
+      currentData: undefined,
+      tableLoading: true
     })
 
     const getList = async () => {
+      state.tableLoading = true
       const params = {
         search: state.searchVal,
         pageIndex: state.pagination.current,
@@ -59,6 +58,8 @@ export default defineComponent({
       const res = await getFingerList(params)
       state.dataSource = res.data
       state.pagination.total = res.totalItem
+      state.pagination.index = res.pageIndex
+      state.tableLoading = false
     }
     const openModal = () => {
       state.visible = true

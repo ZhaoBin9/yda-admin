@@ -2,20 +2,11 @@
   <div class="wrap">
     <section class="tree-box">
       <h3 class="company-title">{{ companyName }}</h3>
-      <a-tree
-        class="draggable-tree"
-        v-model:selectedKeys="selectedKeys"
-        :default-expanded-keys="[]"
-        :tree-data="permissionList"
-      >
-        <template #switcherIcon>
-          <img src="@/assets/svg/depart-tree-arrow.svg" />
-        </template>
-      </a-tree>
+      <tree-virtual-list :size="49" :remain="15" :list="permissionList" />
     </section>
     <section class="table-box">
       <tableHeader>
-        <a-input class="sec-input" :maxlength="20" v-model:value="searchVal" placeholder="请输入部门名称">
+        <a-input class="sec-input" allowClear :maxlength="20" v-model:value="searchVal" placeholder="请输入部门名称">
           <template #prefix>
             <img src="@/assets/svg/search.svg" />
           </template>
@@ -30,11 +21,13 @@
         :dataSource="dataSource"
         :pagination="pagination"
         @change="handleTableChange"
+        :loading="tableLoading"
       >
+        <template #id="{index}">{{ pagination.index * 10 + index - 9 }}</template>
         <template #parentDeptName="{text}">{{ text ? text : '--' }}</template>
         <template #level="{text}">{{ text }}级</template>
         <template #action="{record}">
-          <a @click="openModal('edit', record)" v-btn="'update'">修改</a>
+          <a @click="openModal('edit', record)" v-btn="'add'">修改</a>
           <a @click="openModal('delete', record)" v-btn="'delete'" style="margin-left: 20px">删除</a>
         </template>
       </a-table>
@@ -57,6 +50,7 @@ import { Modal } from 'ant-design-vue'
 import tableHeader from '@/views/components/tableHeader'
 import { departmentColumns } from '../columns'
 import modal from './components/modal'
+import TreeVirtualList from '@/components/VirtualList/treeVirtualList'
 import {
   getDepartmentOrganizational,
   getDepartmentList,
@@ -71,7 +65,8 @@ import { useStore } from 'vuex'
 export default defineComponent({
   components: {
     tableHeader,
-    modal
+    modal,
+    TreeVirtualList
   },
   setup() {
     const store = useStore()
@@ -83,26 +78,32 @@ export default defineComponent({
       departmentColumns,
       isAdd: false,
       pagination: {
-        current: 1,
         pageSize: 10,
-        total: 0
+        total: 0,
+        current: 1,
+        'show-total': total => `总共${total}条数据`,
+        index: 0
       },
       dataSource: [],
       permissionList: [],
       copyList: [],
       actionType: 'add',
       current: undefined,
-      loading: false
+      loading: false,
+      tableLoading: true
     })
     const getList = async () => {
+      state.tableLoading = true
       const params = {
         searchDepartmentName: state.searchVal,
         pageIndex: state.pagination.current,
         pageSize: state.pagination.pageSize
       }
       const res = await getDepartmentList(params)
+      state.tableLoading = false
       state.dataSource = res.data
       state.pagination.total = res.totalItem
+      state.pagination.index = res.pageIndex
     }
     const fetchPermissionList = async () => {
       function replacePermissionFeild(arr) {
@@ -165,26 +166,38 @@ export default defineComponent({
       actionObjFn[type] ? actionObjFn[type]() : (state.visible = true)
     }
     const modalSubmit = async value => {
+      let isSuccess = false
       if (state.actionType === 'export') {
-        const res = await importDepartment(value)
-        if (res.success) cmsNotice('success', '上传成功')
+        const res = await importDepartment({ file: value })
+        if (res.success) {
+          isSuccess = true
+          cmsNotice('success', '上传成功')
+        }
       } else if (state.actionType === 'add') {
         const res = await addDepartment({
           departmentName: value.department,
           parentId: value.nextDepart[value.nextDepart.length - 1] || 0
         })
-        if (res.success) cmsNotice('success', '添加成功')
+        if (res.success) {
+          cmsNotice('success', '添加成功')
+          isSuccess = true
+        }
       } else if (state.actionType === 'edit') {
         const res = await editDepartment({
           departmentName: value.department,
           parentId: value.nextDepart[value.nextDepart.length - 1] || 0,
           id: state.current.id
         })
-        if (res.success) cmsNotice('success', '修改成功')
+        if (res.success) {
+          isSuccess = true
+          cmsNotice('success', '修改成功')
+        }
       }
       state.loading = false
-      getList()
-      fetchPermissionList()
+      if (isSuccess) {
+        getList()
+        fetchPermissionList()
+      }
       state.visible = false
     }
     onMounted(() => {
